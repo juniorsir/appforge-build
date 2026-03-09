@@ -1,0 +1,59 @@
+name: AppForge Cloud Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source ZIP
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Unzip Uploaded Source
+        run: |
+          if [ -f "source.zip" ]; then
+            unzip -o source.zip -d app_workspace
+          else
+            echo "No source.zip found!"
+            exit 1
+          fi
+
+      - name: Install JS Dependencies
+        run: |
+          cd app_workspace
+          npm install
+
+      - name: Build Web App
+        run: |
+          cd app_workspace
+          # Automatically detects and runs Vite/React build scripts
+          npm run build --if-present
+
+      - name: Capacitor Sync
+        run: |
+          cd app_workspace
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd app_workspace/android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: appforge-apk
+          path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
