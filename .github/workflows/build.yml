@@ -2,12 +2,17 @@ name: AppForge Cloud Build
 
 on:
   workflow_dispatch:
+    inputs:
+      app_id:
+        description: 'Unique ID of the app to build'
+        required: true
+        type: string
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source ZIP
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -23,10 +28,12 @@ jobs:
 
       - name: Unzip Uploaded Source
         run: |
-          if [ -f "source.zip" ]; then
-            unzip -o source.zip -d app_workspace
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          
+          if [ -f "$TARGET_DIR/source.zip" ]; then
+            unzip -o "$TARGET_DIR/source.zip" -d app_workspace
           else
-            echo "No source.zip found!"
+            echo "No source.zip found for App ID ${{ github.event.inputs.app_id }}!"
             exit 1
           fi
 
@@ -38,7 +45,6 @@ jobs:
       - name: Build Web App
         run: |
           cd app_workspace
-          # Automatically detects and runs Vite/React build scripts
           npm run build --if-present
 
       - name: Capacitor Sync
@@ -55,5 +61,5 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: appforge-apk
+          name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
