@@ -1,0 +1,242 @@
+{
+  "base": {
+    "android": [
+      "android.permission.INTERNET",
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.ACCESS_WIFI_STATE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/camera": {
+    "android": [
+      "android.permission.CAMERA",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE"
+    ],
+    "ios": {
+      "NSCameraUsageDescription": "This app needs camera access to take photos.",
+      "NSPhotoLibraryUsageDescription": "This app needs access to your photos.",
+      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos."
+    }
+  },
+
+  "@capacitor/geolocation": {
+    "android": [
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION"
+    ],
+    "ios": {
+      "NSLocationWhenInUseUsageDescription": "This app needs your location."
+    }
+  },
+
+  "@capacitor/background-location": {
+    "android": [
+      "android.permission.ACCESS_BACKGROUND_LOCATION"
+    ],
+    "ios": {
+      "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access even in background."
+    }
+  },
+
+  "@capacitor/microphone": {
+    "android": [
+      "android.permission.RECORD_AUDIO"
+    ],
+    "ios": {
+      "NSMicrophoneUsageDescription": "This app needs microphone access."
+    }
+  },
+
+  "@capacitor/filesystem": {
+    "android": [
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.MANAGE_EXTERNAL_STORAGE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/media": {
+    "android": [
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_AUDIO"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/contacts": {
+    "android": [
+      "android.permission.READ_CONTACTS",
+      "android.permission.WRITE_CONTACTS"
+    ],
+    "ios": {
+      "NSContactsUsageDescription": "This app needs access to contacts."
+    }
+  },
+
+  "@capacitor/calendar": {
+    "android": [
+      "android.permission.READ_CALENDAR",
+      "android.permission.WRITE_CALENDAR"
+    ],
+    "ios": {
+      "NSCalendarsUsageDescription": "This app needs calendar access."
+    }
+  },
+
+  "@capacitor/bluetooth": {
+    "android": [
+      "android.permission.BLUETOOTH",
+      "android.permission.BLUETOOTH_ADMIN",
+      "android.permission.BLUETOOTH_CONNECT",
+      "android.permission.BLUETOOTH_SCAN"
+    ],
+    "ios": {
+      "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth."
+    }
+  },
+
+  "@capacitor/nearby": {
+    "android": [
+      "android.permission.NEARBY_WIFI_DEVICES"
+    ],
+    "ios": {
+      "NSLocalNetworkUsageDescription": "This app needs access to your local network."
+    }
+  },
+
+  "@capacitor/nfc": {
+    "android": [
+      "android.permission.NFC"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/sensors": {
+    "android": [
+      "android.permission.BODY_SENSORS",
+      "android.permission.ACTIVITY_RECOGNITION"
+    ],
+    "ios": {
+      "NSMotionUsageDescription": "This app uses motion sensors."
+    }
+  },
+
+  "@capacitor/biometrics": {
+    "android": [
+      "android.permission.USE_BIOMETRIC"
+    ],
+    "ios": {
+      "NSFaceIDUsageDescription": "Face ID is used for authentication."
+    }
+  },
+
+  "@capacitor/haptics": {
+    "android": [
+      "android.permission.VIBRATE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/network": {
+    "android": [
+      "android.permission.ACCESS_NETWORK_STATE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/wifi": {
+    "android": [
+      "android.permission.CHANGE_WIFI_STATE"
+    ],
+    "ios": {
+      "NSLocalNetworkUsageDescription": "This app needs access to local network devices."
+    }
+  },
+
+  "@capacitor/device": {
+    "android": [
+      "android.permission.READ_PHONE_STATE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/phone": {
+    "android": [
+      "android.permission.CALL_PHONE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/sms": {
+    "android": [
+      "android.permission.SEND_SMS",
+      "android.permission.RECEIVE_SMS",
+      "android.permission.READ_SMS"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/notifications": {
+    "android": [
+      "android.permission.POST_NOTIFICATIONS"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/background-task": {
+    "android": [
+      "android.permission.WAKE_LOCK",
+      "android.permission.FOREGROUND_SERVICE"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/overlay": {
+    "android": [
+      "android.permission.SYSTEM_ALERT_WINDOW"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/exact-alarm": {
+    "android": [
+      "android.permission.SCHEDULE_EXACT_ALARM"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/install-apk": {
+    "android": [
+      "android.permission.REQUEST_INSTALL_PACKAGES"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/app-query": {
+    "android": [
+      "android.permission.QUERY_ALL_PACKAGES"
+    ],
+    "ios": {}
+  },
+
+  "@capacitor/health": {
+    "android": [
+      "android.permission.BODY_SENSORS"
+    ],
+    "ios": {
+      "NSHealthShareUsageDescription": "This app reads health data.",
+      "NSHealthUpdateUsageDescription": "This app updates health data."
+    }
+  },
+
+  "@capacitor/reminders": {
+    "android": [],
+    "ios": {
+      "NSRemindersUsageDescription": "This app needs access to reminders."
+    }
+  }
+}
