@@ -59,7 +59,7 @@ jobs:
           ./gradlew assembleDebug
 
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
