@@ -11,10 +11,23 @@ on:
         description: 'android, ios, or both'
         required: true
         type: string
+      project_category:
+        description: 'web or native'
+        required: true
+        type: string
+        default: 'web'
+      project_type:
+        description: 'Framework type (react, flutter, etc)'
+        required: true
+        type: string
+        default: 'unknown'
 
 jobs:
+  # ==========================================
+  # 1. WEB APP BUILDER (Capacitor)
+  # ==========================================
   build-android:
-    if: inputs.platform == 'android' || inputs.platform == 'both'
+    if: inputs.project_category == 'web' && (inputs.platform == 'android' || inputs.platform == 'both')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -37,14 +50,10 @@ jobs:
           unzip -o "$TARGET_DIR/source.zip" -d app_workspace
 
       - name: Install JS Dependencies
-        run: |
-          cd app_workspace
-          npm install
+        run: cd app_workspace && npm install
 
       - name: Build Web App
-        run: |
-          cd app_workspace
-          npm run build --if-present
+        run: cd app_workspace && npm run build --if-present
           
       - name: Add Android Platform
         run: |
@@ -53,9 +62,7 @@ jobs:
           npx cap add android
 
       - name: Capacitor Sync
-        run: |
-          cd app_workspace
-          npx cap sync android
+        run: cd app_workspace && npx cap sync android
 
       - name: Build APK
         run: |
@@ -69,9 +76,8 @@ jobs:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
 
-
   build-ios:
-    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    if: inputs.project_category == 'web' && (inputs.platform == 'ios' || inputs.platform == 'both')
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
@@ -88,14 +94,10 @@ jobs:
           unzip -o "$TARGET_DIR/source.zip" -d app_workspace
 
       - name: Install JS Dependencies
-        run: |
-          cd app_workspace
-          npm install
+        run: cd app_workspace && npm install
 
       - name: Build Web App
-        run: |
-          cd app_workspace
-          npm run build --if-present
+        run: cd app_workspace && npm run build --if-present
           
       - name: Add iOS Platform
         run: |
@@ -104,9 +106,7 @@ jobs:
           npx cap add ios
 
       - name: Capacitor Sync
-        run: |
-          cd app_workspace
-          npx cap sync ios
+        run: cd app_workspace && npx cap sync ios
 
       - name: Zipping Xcode Project 
         run: cd app_workspace && zip -r ios-project.zip ios/
@@ -114,6 +114,70 @@ jobs:
       - name: Upload iOS Artifact
         uses: actions/upload-artifact@v4
         with:
-          # FIXED: This must be appforge-ios- so it doesn't conflict with Android!
           name: appforge-ios-${{ github.event.inputs.app_id }}
           path: app_workspace/ios-project.zip
+
+  # ==========================================
+  # 2. FLUTTER BUILDER
+  # ==========================================
+  build-flutter:
+    if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+          
+      - name: Install Dependencies
+        run: cd app_workspace && flutter pub get
+        
+      - name: Build Flutter APK
+        run: cd app_workspace && flutter build apk --debug
+        
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-apk-${{ github.event.inputs.app_id }}
+          path: app_workspace/build/app/outputs/flutter-apk/app-debug.apk
+
+  # ==========================================
+  # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
+  # ==========================================
+  build-native-android:
+    if: inputs.project_category == 'native' && inputs.project_type == 'android_native'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+          
+      - name: Build Native APK
+        run: |
+          cd app_workspace
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+          
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-apk-${{ github.event.inputs.app_id }}
+          path: app_workspace/app/build/outputs/apk/debug/*.apk
