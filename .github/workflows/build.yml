@@ -29,13 +29,7 @@ jobs:
       - name: Unzip Uploaded Source
         run: |
           TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
-          
-          if [ -f "$TARGET_DIR/source.zip" ]; then
-            unzip -o "$TARGET_DIR/source.zip" -d app_workspace
-          else
-            echo "No source.zip found for App ID ${{ github.event.inputs.app_id }}!"
-            exit 1
-          fi
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
 
       - name: Install JS Dependencies
         run: |
@@ -46,6 +40,14 @@ jobs:
         run: |
           cd app_workspace
           npm run build --if-present
+          
+      # --- FIX IS HERE ---
+      - name: Add Android Platform
+        run: |
+          cd app_workspace
+          npm install @capacitor/android
+          npx cap add android
+      # -------------------
 
       - name: Capacitor Sync
         run: |
