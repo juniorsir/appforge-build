@@ -7,16 +7,21 @@ on:
         description: 'Unique ID of the app to build'
         required: true
         type: string
+      platform:
+        description: 'android, ios, or both'
+        required: true
+        type: string
 
 jobs:
   build-android:
+    if: inputs.platform == 'android' || inputs.platform == 'both'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
@@ -41,13 +46,11 @@ jobs:
           cd app_workspace
           npm run build --if-present
           
-      # --- FIX IS HERE ---
       - name: Add Android Platform
         run: |
           cd app_workspace
           npm install @capacitor/android
           npx cap add android
-      # -------------------
 
       - name: Capacitor Sync
         run: |
@@ -65,3 +68,52 @@ jobs:
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
+
+
+  build-ios:
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+
+      - name: Install JS Dependencies
+        run: |
+          cd app_workspace
+          npm install
+
+      - name: Build Web App
+        run: |
+          cd app_workspace
+          npm run build --if-present
+          
+      - name: Add iOS Platform
+        run: |
+          cd app_workspace
+          npm install @capacitor/ios
+          npx cap add ios
+
+      - name: Capacitor Sync
+        run: |
+          cd app_workspace
+          npx cap sync ios
+
+      - name: Zipping Xcode Project 
+        run: cd app_workspace && zip -r ios-project.zip ios/
+    
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # FIXED: This must be appforge-ios- so it doesn't conflict with Android!
+          name: appforge-ios-${{ github.event.inputs.app_id }}
+          path: app_workspace/ios-project.zip
