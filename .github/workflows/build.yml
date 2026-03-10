@@ -64,6 +64,12 @@ jobs:
       - name: Capacitor Sync
         run: cd app_workspace && npx cap sync android
 
+      - name: Auto-Inject Native Permissions
+        run: |
+          chmod +x ./scripts/inject-permissions.sh
+          ./scripts/inject-permissions.sh
+        working-directory: app_workspace
+
       - name: Build APK
         run: |
           cd app_workspace/android
