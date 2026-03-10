@@ -65,9 +65,7 @@ jobs:
         run: cd app_workspace && npx cap sync android
 
       - name: Auto-Inject Native Permissions
-        run: |
-          chmod +x ./scripts/inject-permissions.sh
-          ./scripts/inject-permissions.sh
+        run: node ../scripts/inject-permissions.js
         working-directory: app_workspace
 
       - name: Build APK
