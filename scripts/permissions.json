@@ -8,235 +8,299 @@
     "ios": {}
   },
 
+  "--- CAMERA & BARCODE SCANNERS ---": {},
   "@capacitor/camera": {
-    "android": [
-      "android.permission.CAMERA",
-      "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE"
-    ],
-    "ios": {
-      "NSCameraUsageDescription": "This app needs camera access to take photos.",
-      "NSPhotoLibraryUsageDescription": "This app needs access to your photos.",
-      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos."
-    }
+    "android": ["android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access to take photos.", "NSPhotoLibraryUsageDescription": "This app needs access to your photos.", "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos."}
+  },
+  "@capacitor-community/camera-preview": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access for the live preview."}
+  },
+  "@capgo/camera-preview": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access for the live preview."}
+  },
+  "capacitor-camera-view": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access for the live preview."}
+  },
+  "@capacitor/barcode-scanner": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan barcodes."}
+  },
+  "@capacitor-community/barcode-scanner": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan barcodes."}
+  },
+  "@capacitor-mlkit/barcode-scanning": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan barcodes."}
+  },
+  "capacitor-document-scanner": {
+    "android": ["android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan documents."}
+  },
+  "@capgo/capacitor-document-scanner": {
+    "android": ["android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan documents."}
   },
 
+  "--- LOCATION & GPS ---": {},
   "@capacitor/geolocation": {
-    "android": [
-      "android.permission.ACCESS_FINE_LOCATION",
-      "android.permission.ACCESS_COARSE_LOCATION"
-    ],
-    "ios": {
-      "NSLocationWhenInUseUsageDescription": "This app needs your location."
-    }
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app needs your location for core features."}
+  },
+  "@capgo/nativegeocoder": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app needs your location to find addresses."}
+  },
+  "@transistorsoft/capacitor-background-geolocation": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION", "android.permission.ACTIVITY_RECOGNITION", "android.permission.FOREGROUND_SERVICE"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app tracks your location.", "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access in the background.", "NSMotionUsageDescription": "This app uses motion to detect when you are moving."}
+  },
+  "cordova-background-geolocation-lt": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION", "android.permission.ACTIVITY_RECOGNITION", "android.permission.FOREGROUND_SERVICE"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app tracks your location.", "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access in the background.", "NSMotionUsageDescription": "This app uses motion to detect when you are moving."}
+  },
+  "capacitor-radar": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app tracks location.", "NSLocationAlwaysAndWhenInUseUsageDescription": "This app tracks background location."}
   },
 
-  "@capacitor/background-location": {
-    "android": [
-      "android.permission.ACCESS_BACKGROUND_LOCATION"
-    ],
-    "ios": {
-      "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access even in background."
-    }
+  "--- AUDIO & MICROPHONE ---": {},
+  "@capacitor-community/speech-recognition": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSSpeechRecognitionUsageDescription": "This app needs speech recognition.", "NSMicrophoneUsageDescription": "This app needs microphone access to hear you."}
+  },
+  "@capgo/capacitor-speech-recognition": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSSpeechRecognitionUsageDescription": "This app needs speech recognition.", "NSMicrophoneUsageDescription": "This app needs microphone access to hear you."}
+  },
+  "capacitor-voice-recorder": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
+  },
+  "@independo/capacitor-voice-recorder": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
+  },
+  "@capgo/capacitor-audio-recorder": {
+    "android": ["android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
+  },
+  "@mozartec/capacitor-microphone": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access."}
+  },
+  "cordova-plugin-audioinput": {
+    "android": ["android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to stream audio."}
   },
 
-  "@capacitor/microphone": {
-    "android": [
-      "android.permission.RECORD_AUDIO"
-    ],
-    "ios": {
-      "NSMicrophoneUsageDescription": "This app needs microphone access."
-    }
-  },
-
+  "--- FILES, MEDIA, & STORAGE ---": {},
   "@capacitor/filesystem": {
-    "android": [
-      "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE",
-      "android.permission.MANAGE_EXTERNAL_STORAGE"
-    ],
+    "android": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"],
+    "ios": {"NSFileProviderDomainUsageDescription": "This app needs access to save and read files."}
+  },
+  "@capacitor-community/media": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO"],
+    "ios": {"NSPhotoLibraryUsageDescription": "This app needs access to your media library.", "NSPhotoLibraryAddUsageDescription": "This app needs permission to save media."}
+  },
+  "@byteowls/capacitor-filesharer": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"],
+    "ios": {"NSPhotoLibraryAddUsageDescription": "This app needs permission to save files."}
+  },
+  "@capawesome/capacitor-file-picker": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE"],
+    "ios": {"NSPhotoLibraryUsageDescription": "This app needs access to select files and photos."}
+  },
+  "@whiteguru/capacitor-plugin-file-picker": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE"],
+    "ios": {"NSPhotoLibraryUsageDescription": "This app needs access to select files and photos."}
+  },
+  "@jonz94/capacitor-image-picker": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES"],
+    "ios": {"NSPhotoLibraryUsageDescription": "This app needs access to pick images."}
+  },
+
+  "--- BLUETOOTH & NFC ---": {},
+  "@capacitor-community/bluetooth-le": {
+    "android": ["android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN", "android.permission.BLUETOOTH_CONNECT", "android.permission.BLUETOOTH_SCAN"],
+    "ios": {"NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to devices.", "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to communicate with peripherals."}
+  },
+  "capacitor-thermal-printer": {
+    "android": ["android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN", "android.permission.BLUETOOTH_CONNECT", "android.permission.BLUETOOTH_SCAN"],
+    "ios": {"NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to printers."}
+  },
+  "@ruhiverse/thermal-printer-plugin": {
+    "android": ["android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN", "android.permission.BLUETOOTH_CONNECT", "android.permission.BLUETOOTH_SCAN"],
+    "ios": {"NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to printers."}
+  },
+  "@capgo/capacitor-nfc": {
+    "android": ["android.permission.NFC"],
+    "ios": {"NFCReaderUsageDescription": "This app needs NFC access to read tags."}
+  },
+  "@exxili/capacitor-nfc": {
+    "android": ["android.permission.NFC"],
+    "ios": {"NFCReaderUsageDescription": "This app needs NFC access to read tags."}
+  },
+
+  "--- BIOMETRICS (FACE ID / FINGERPRINT) ---": {},
+  "capacitor-native-biometric": {
+    "android": ["android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"],
+    "ios": {"NSFaceIDUsageDescription": "Face ID is used to securely authenticate you."}
+  },
+  "@aparajita/capacitor-biometric-auth": {
+    "android": ["android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"],
+    "ios": {"NSFaceIDUsageDescription": "Face ID is used to securely authenticate you."}
+  },
+  "@capgo/capacitor-native-biometric": {
+    "android": ["android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"],
+    "ios": {"NSFaceIDUsageDescription": "Face ID is used to securely authenticate you."}
+  },
+
+  "--- CALENDAR & CONTACTS ---": {},
+  "@ebarooni/capacitor-calendar": {
+    "android": ["android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"],
+    "ios": {"NSCalendarsUsageDescription": "This app needs calendar access.", "NSRemindersUsageDescription": "This app needs reminder access."}
+  },
+  "@capacitor-community/contacts": {
+    "android": ["android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS"],
+    "ios": {"NSContactsUsageDescription": "This app needs access to contacts."}
+  },
+  "@kidup/contacts": {
+    "android": ["android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS"],
+    "ios": {"NSContactsUsageDescription": "This app needs access to contacts."}
+  },
+  "@skektec/capacitor-contacts": {
+    "android": ["android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS"],
+    "ios": {"NSContactsUsageDescription": "This app needs access to contacts."}
+  },
+
+  "--- PUSH NOTIFICATIONS ---": {},
+  "@capacitor/push-notifications": {
+    "android": ["android.permission.POST_NOTIFICATIONS"],
+    "ios": {}
+  },
+  "@capacitor/local-notifications": {
+    "android": ["android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
+    "ios": {}
+  },
+  "@capacitor-firebase/messaging": {
+    "android": ["android.permission.POST_NOTIFICATIONS"],
+    "ios": {}
+  },
+  "@capacitor-community/fcm": {
+    "android": ["android.permission.POST_NOTIFICATIONS"],
     "ios": {}
   },
 
-  "@capacitor/media": {
-    "android": [
-      "android.permission.READ_MEDIA_IMAGES",
-      "android.permission.READ_MEDIA_VIDEO",
-      "android.permission.READ_MEDIA_AUDIO"
-    ],
-    "ios": {}
+  "--- HEALTH & FITNESS ---": {},
+  "@capgo/capacitor-health": {
+    "android": ["android.permission.BODY_SENSORS", "android.permission.ACTIVITY_RECOGNITION"],
+    "ios": {"NSHealthShareUsageDescription": "This app reads health data.", "NSHealthUpdateUsageDescription": "This app updates health data.", "NSMotionUsageDescription": "This app requires motion tracking."}
   },
-
-  "@capacitor/contacts": {
-    "android": [
-      "android.permission.READ_CONTACTS",
-      "android.permission.WRITE_CONTACTS"
-    ],
-    "ios": {
-      "NSContactsUsageDescription": "This app needs access to contacts."
-    }
-  },
-
-  "@capacitor/calendar": {
-    "android": [
-      "android.permission.READ_CALENDAR",
-      "android.permission.WRITE_CALENDAR"
-    ],
-    "ios": {
-      "NSCalendarsUsageDescription": "This app needs calendar access."
-    }
-  },
-
-  "@capacitor/bluetooth": {
-    "android": [
-      "android.permission.BLUETOOTH",
-      "android.permission.BLUETOOTH_ADMIN",
-      "android.permission.BLUETOOTH_CONNECT",
-      "android.permission.BLUETOOTH_SCAN"
-    ],
-    "ios": {
-      "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth."
-    }
-  },
-
-  "@capacitor/nearby": {
-    "android": [
-      "android.permission.NEARBY_WIFI_DEVICES"
-    ],
-    "ios": {
-      "NSLocalNetworkUsageDescription": "This app needs access to your local network."
-    }
-  },
-
-  "@capacitor/nfc": {
-    "android": [
-      "android.permission.NFC"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/sensors": {
-    "android": [
-      "android.permission.BODY_SENSORS",
-      "android.permission.ACTIVITY_RECOGNITION"
-    ],
-    "ios": {
-      "NSMotionUsageDescription": "This app uses motion sensors."
-    }
-  },
-
-  "@capacitor/biometrics": {
-    "android": [
-      "android.permission.USE_BIOMETRIC"
-    ],
-    "ios": {
-      "NSFaceIDUsageDescription": "Face ID is used for authentication."
-    }
-  },
-
-  "@capacitor/haptics": {
-    "android": [
-      "android.permission.VIBRATE"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/network": {
-    "android": [
-      "android.permission.ACCESS_NETWORK_STATE"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/wifi": {
-    "android": [
-      "android.permission.CHANGE_WIFI_STATE"
-    ],
-    "ios": {
-      "NSLocalNetworkUsageDescription": "This app needs access to local network devices."
-    }
-  },
-
-  "@capacitor/device": {
-    "android": [
-      "android.permission.READ_PHONE_STATE"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/phone": {
-    "android": [
-      "android.permission.CALL_PHONE"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/sms": {
-    "android": [
-      "android.permission.SEND_SMS",
-      "android.permission.RECEIVE_SMS",
-      "android.permission.READ_SMS"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/notifications": {
-    "android": [
-      "android.permission.POST_NOTIFICATIONS"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/background-task": {
-    "android": [
-      "android.permission.WAKE_LOCK",
-      "android.permission.FOREGROUND_SERVICE"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/overlay": {
-    "android": [
-      "android.permission.SYSTEM_ALERT_WINDOW"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/exact-alarm": {
-    "android": [
-      "android.permission.SCHEDULE_EXACT_ALARM"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/install-apk": {
-    "android": [
-      "android.permission.REQUEST_INSTALL_PACKAGES"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/app-query": {
-    "android": [
-      "android.permission.QUERY_ALL_PACKAGES"
-    ],
-    "ios": {}
-  },
-
-  "@capacitor/health": {
-    "android": [
-      "android.permission.BODY_SENSORS"
-    ],
-    "ios": {
-      "NSHealthShareUsageDescription": "This app reads health data.",
-      "NSHealthUpdateUsageDescription": "This app updates health data."
-    }
-  },
-
-  "@capacitor/reminders": {
+  "@perfood/capacitor-healthkit": {
     "android": [],
-    "ios": {
-      "NSRemindersUsageDescription": "This app needs access to reminders."
-    }
+    "ios": {"NSHealthShareUsageDescription": "This app reads health data.", "NSHealthUpdateUsageDescription": "This app updates health data."}
+  },
+  "@flomentumsolutions/capacitor-health-extended": {
+    "android": ["android.permission.BODY_SENSORS", "android.permission.ACTIVITY_RECOGNITION"],
+    "ios": {"NSHealthShareUsageDescription": "This app reads health data.", "NSHealthUpdateUsageDescription": "This app updates health data."}
+  },
+  "@capgo/capacitor-pedometer": {
+    "android": ["android.permission.ACTIVITY_RECOGNITION"],
+    "ios": {"NSMotionUsageDescription": "This app tracks your steps."}
+  },
+
+  "--- SMS & PHONE CALLS ---": {},
+  "@byteowls/capacitor-sms": {
+    "android": ["android.permission.SEND_SMS", "android.permission.RECEIVE_SMS", "android.permission.READ_SMS"],
+    "ios": {}
+  },
+  "@solimanware/capacitor-sms-reader": {
+    "android": ["android.permission.READ_SMS"],
+    "ios": {}
+  },
+  "@aalzehla/capacitor-sms-retriever": {
+    "android": ["android.permission.READ_SMS", "android.permission.RECEIVE_SMS"],
+    "ios": {}
+  },
+  "@shaher/capacitor-sms-retriever": {
+    "android": ["android.permission.READ_SMS", "android.permission.RECEIVE_SMS"],
+    "ios": {}
+  },
+  "capacitor-plugin-incoming-call": {
+    "android": ["android.permission.CALL_PHONE", "android.permission.READ_PHONE_STATE"],
+    "ios": {}
+  },
+
+  "--- ADS & APP TRACKING ---": {},
+  "capacitor-plugin-app-tracking-transparency": {
+    "android": [],
+    "ios": {"NSUserTrackingUsageDescription": "This app tracks usage to provide personalized ads."}
+  },
+  "@capgo/capacitor-app-tracking-transparency": {
+    "android": [],
+    "ios": {"NSUserTrackingUsageDescription": "This app tracks usage to provide personalized ads."}
+  },
+  "@capacitor-community/advertising-id": {
+    "android": ["com.google.android.gms.permission.AD_ID"],
+    "ios": {"NSUserTrackingUsageDescription": "This app uses your advertising ID for ads."}
+  },
+  "@capacitor-community/admob": {
+    "android": ["com.google.android.gms.permission.AD_ID"],
+    "ios": {"NSUserTrackingUsageDescription": "This app uses tracking to display personalized ads."}
+  },
+  "@admob-plus/capacitor": {
+    "android": ["com.google.android.gms.permission.AD_ID"],
+    "ios": {"NSUserTrackingUsageDescription": "This app uses tracking to display personalized ads."}
+  },
+
+  "--- FLASHLIGHT & HAPTICS ---": {},
+  "@capacitor/haptics": {
+    "android": ["android.permission.VIBRATE"],
+    "ios": {}
+  },
+  "@capawesome/capacitor-torch": {
+    "android": ["android.permission.CAMERA", "android.permission.FLASHLIGHT"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to use the flashlight."}
+  },
+  "@capgo/capacitor-flash": {
+    "android": ["android.permission.CAMERA", "android.permission.FLASHLIGHT"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to use the flashlight."}
+  },
+
+  "--- BACKGROUND TASKS & WAKELOCK ---": {},
+  "@capacitor-community/keep-awake": {
+    "android": ["android.permission.WAKE_LOCK"],
+    "ios": {}
+  },
+  "@capawesome/capacitor-background-task": {
+    "android": ["android.permission.WAKE_LOCK", "android.permission.FOREGROUND_SERVICE"],
+    "ios": {}
+  },
+  "@anuradev/capacitor-background-mode": {
+    "android": ["android.permission.WAKE_LOCK", "android.permission.FOREGROUND_SERVICE", "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"],
+    "ios": {}
+  },
+  "bp-capacitor-background-mode": {
+    "android": ["android.permission.WAKE_LOCK", "android.permission.FOREGROUND_SERVICE", "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"],
+    "ios": {}
+  },
+
+  "--- NETWORK & WIFI UTILITIES ---": {},
+  "@codext/capacitor-wifi": {
+    "android": ["android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE", "android.permission.ACCESS_FINE_LOCATION"],
+    "ios": {"NSLocalNetworkUsageDescription": "This app needs local network access to connect to devices."}
+  },
+  "@tolutronics/capacitor-wifi": {
+    "android": ["android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE", "android.permission.ACCESS_FINE_LOCATION"],
+    "ios": {"NSLocalNetworkUsageDescription": "This app needs local network access to connect to devices."}
+  },
+  "ln-capacitor-wifi": {
+    "android": ["android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE", "android.permission.ACCESS_FINE_LOCATION"],
+    "ios": {"NSLocalNetworkUsageDescription": "This app needs local network access to connect to devices."}
   }
 }
