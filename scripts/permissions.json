@@ -328,7 +328,7 @@
     "android": ["android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.VIBRATE"],
     "ios": {},
     "requiresDesugaring": true 
-  }
+  },
   "firebase_messaging": {
     "android": ["android.permission.POST_NOTIFICATIONS"],
     "ios": {}
