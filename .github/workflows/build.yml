@@ -203,6 +203,27 @@ jobs:
             fi
           done
       # --------------------------------
+      - name: Fix File Timestamps for C++ (Ninja Bug)
+        run: |
+          echo "Updating file timestamps to fix Ninja infinite loop..."
+          find app_workspace -type f -exec touch {} +
+
+      # --- ADD THIS NEW STEP ---
+      - name: Patch Broken C++ Plugins (Pedometer)
+        run: |
+          echo "Patching CMake paths in broken plugins..."
+          
+          # Find all plugin build.gradle files
+          find app_workspace -name "build.gradle" -type f | while read file; do
+            # If the plugin is trying to use C++ (CMake)
+            if grep -q "externalNativeBuild" "$file"; then
+              echo "Patching C++ configuration in: $file"
+              
+              # Force the plugin to use the safe version of CMake (3.22.1)
+              # This stops it from downloading broken versions of Ninja
+              sed -i '/externalNativeBuild {/a \        cmake { version "3.22.1" }' "$file"
+            fi
+          done
 
       - name: Build Flutter APK
         run: |
