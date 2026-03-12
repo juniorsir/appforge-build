@@ -176,6 +176,39 @@ jobs:
       - name: Install Dependencies
         run: cd $PROJECT_DIR && flutter pub get
 
+      - name: Install Dependencies
+        run: cd $PROJECT_DIR && flutter pub get
+
+      # --- THE ULTIMATE PLUGIN FIXER ---
+      - name: Fix Broken Plugin Namespaces
+        run: |
+          echo "Scanning for broken plugins missing namespaces..."
+          
+          # Find all build.gradle files in the workspace (including downloaded plugins)
+          find app_workspace -name "build.gradle" -type f | while read file; do
+            # If the file belongs to an Android library plugin...
+            if grep -q "com.android.library" "$file"; then
+              # And it DOES NOT have a namespace defined...
+              if ! grep -q "namespace" "$file"; then
+                echo "Fixing broken plugin: $file"
+                
+                # Extract the package name from its AndroidManifest.xml
+                manifest=$(dirname "$file")/src/main/AndroidManifest.xml
+                if [ -f "$manifest" ]; then
+                  package_name=$(grep -oP 'package="\K[^"]+' "$manifest" || echo "com.example.plugin")
+                  
+                  # Inject the namespace directly into the android { block!
+                  sed -i "/android {/a \    namespace '${package_name}'" "$file"
+                  echo " -> Injected namespace: $package_name"
+                fi
+              fi
+            fi
+          done
+      # --------------------------------
+
+      - name: Build Flutter APK
+        run: cd $PROJECT_DIR && flutter build apk --debug
+
       - name: Build Flutter APK
         run: cd $PROJECT_DIR && flutter build apk --debug
         
