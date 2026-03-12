@@ -39,6 +39,49 @@ if (fs.existsSync(plistPath)) {
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumber}" "${plistPath}"`);
     } catch (e) {}
 }
+
+// =================================================================
+// 1.5. DESUGARING INJECTION
+// =================================================================
+let needsDesugaring = false;
+
+// We need to parse the dependencies first to check for the flag
+if (fs.existsSync(packageJsonPath) || fs.existsSync(pubspecYamlPath)) {
+    // ... (Your existing dependency parsing logic for `deps` goes here) ...
+    for (const plugin of Object.keys(deps)) {
+        if (permsData[plugin] && permsData[plugin].requiresDesugaring) {
+            needsDesugaring = true;
+            console.log(`-> Plugin ${plugin} requires Android core library desugaring.`);
+            break; // We only need to find one
+        }
+    }
+}
+
+if (needsDesugaring && fs.existsSync(gradlePath)) {
+    console.log("-> Enabling core library desugaring...");
+    try {
+        let gradle = fs.readFileSync(gradlePath, 'utf8');
+        // Add the desugaring dependency
+        if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
+            gradle = gradle.replace(
+                'dependencies {', 
+                'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"'
+            );
+        }
+        // Enable the compile option
+        if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
+            gradle = gradle.replace(
+                /compileOptions\s*{/, 
+                'compileOptions {\n        coreLibraryDesugaringEnabled = true'
+            );
+        }
+        fs.writeFileSync(gradlePath, gradle);
+        console.log("    + Android: Enabled desugaring in build.gradle");
+    } catch (e) {
+        console.error("    - Android: Failed to enable desugaring.", e);
+    }
+}
+
 // =================================================================
 // 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
