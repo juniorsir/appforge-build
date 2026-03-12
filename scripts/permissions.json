@@ -375,5 +375,9 @@
   "wakelock_plus": {
     "android": ["android.permission.WAKE_LOCK"],
     "ios": {}
+  },
+  "pedometer": {
+    "android": ["android.permission.ACTIVITY_RECOGNITION"],
+    "ios": {"NSMotionUsageDescription": "This app needs to access your motion sensors to count your steps."}
   }
 }
