@@ -166,7 +166,15 @@ jobs:
           
       - name: Install Dependencies
         run: cd $PROJECT_DIR && flutter pub get
-        
+
+      - name: Fix Old Flutter Gradle Plugin
+        run: |
+          FILE="app_workspace/android/app/build.gradle"
+
+          if grep -q "app_plugin_loader.gradle" "$FILE"; then
+            echo "Old Flutter Gradle plugin detected. Removing..."
+            sed -i '/app_plugin_loader.gradle/d' "$FILE"
+          fi
       - name: Build Flutter APK
         run: cd $PROJECT_DIR && flutter build apk --debug
         
