@@ -134,7 +134,7 @@ jobs:
           path: app_workspace/ios-project.zip
 
   # ==========================================
-  # 2. FLUTTER BUILDER (Corrected Order)
+  # 2. FLUTTER BUILDER (DEFINITIVE VERSION)
   # ==========================================
   build-flutter:
     if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
@@ -167,15 +167,21 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      # --- CORRECTED ORDER ---
-      # 1. Install dependencies first, so all plugins are downloaded.
+      # --- THE COMPLETE, CORRECT ORDER ---
+      # 1. Regenerate your app's native folders to be modern.
+      - name: Force Regenerate Native Folders
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          rm -rf android/
+          flutter create --platforms=android .
+        
+      # 2. Install dependencies, which downloads all third-party plugins.
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
-      # 2. Now that the broken plugins are on the server, fix them!
+      # 3. Patch any outdated third-party plugins.
       - name: Fix Broken Plugin Namespaces
         run: |
-          # The search path must be the root of the unzipped folder
           find app_workspace -name "build.gradle" -type f | while read file; do
             if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
               manifest=$(dirname "$file")/src/main/AndroidManifest.xml
@@ -186,17 +192,17 @@ jobs:
             fi
           done
       
-      # 3. Inject our own app's permissions
+      # 4. Inject your app's specific permissions.
       - name: Auto-Inject App Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
         run: node scripts/inject-permissions.js
 
-      # 4. Now, it is safe to build
+      # 5. Now, with everything patched and configured, build the app.
       - name: Build Flutter APK
         run: cd ${{ env.PROJECT_DIR }} && flutter build apk --debug
-      # ------------------------
+      # ---------------------------------
         
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
