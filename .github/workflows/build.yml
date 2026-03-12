@@ -128,7 +128,7 @@ jobs:
           name: appforge-ios-${{ github.event.inputs.app_id }}
           path: app_workspace/ios-project.zip
 
-  # ==========================================
+   # ==========================================
   # 2. FLUTTER BUILDER
   # ==========================================
   build-flutter:
@@ -145,7 +145,6 @@ jobs:
           channel: stable
           cache: true
 
-      # ✅ ADD CACHE HERE
       - name: Cache Flutter
         uses: actions/cache@v4
         with:
@@ -165,14 +164,17 @@ jobs:
          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
          echo "Detected Flutter project at $PROJECT_DIR"
           
+      # --- THE FIX IS HERE ---
+      - name: Migrate Old Flutter Projects
+        run: |
+          cd $PROJECT_DIR
+          echo "Automatically upgrading native Android files to latest Flutter standards..."
+          flutter create --platforms=android .
+      # -----------------------
+
       - name: Install Dependencies
         run: cd $PROJECT_DIR && flutter pub get
 
-      - name: Fix Old Flutter Gradle Scripts
-        run: |
-          echo "Fixing deprecated Flutter Gradle scripts..."
-          find app_workspace -type f -name "*.gradle" -exec sed -i '/flutter.gradle/d' {} +
-          find app_workspace -type f -name "*.gradle" -exec sed -i '/app_plugin_loader.gradle/d' {} +
       - name: Build Flutter APK
         run: cd $PROJECT_DIR && flutter build apk --debug
         
