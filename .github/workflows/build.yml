@@ -141,7 +141,6 @@ jobs:
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3' # Use a known, highly stable modern version
           channel: stable
           cache: true
 
