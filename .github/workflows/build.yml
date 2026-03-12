@@ -133,8 +133,8 @@ jobs:
           name: appforge-ios-${{ github.event.inputs.app_id }}
           path: app_workspace/ios-project.zip
 
-   # ==========================================
-  # 2. FLUTTER BUILDER
+  # ==========================================
+  # 2. FLUTTER BUILDER (FINAL VERSION)
   # ==========================================
   build-flutter:
     if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
@@ -149,112 +149,58 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Cache Flutter
+      - name: Cache Flutter Dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pub-cache
-            ${{ runner.tool_cache }}/flutter
-          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          path: ~/.pub-cache
+          key: flutter-pub-${{ hashFiles('**/pubspec.lock') }}
           
       - name: Unzip Uploaded Source
-        run: |
-          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
-          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+        run: unzip -o "apps/${{ inputs.app_id }}/source.zip" -d app_workspace
 
-      - name: Navigate to Sub-Project
+      - name: Set Project Directory
+        id: set_project_dir # Give this step an ID
         run: |
-          # If a sub_path was provided, cd into it. Otherwise, stay in the root.
+          # If a sub_path is provided, the project is inside it. Otherwise, it's the root.
           if [ "${{ inputs.sub_path }}" != "." ]; then
-            echo "Navigating to sub-project at app_workspace/${{ inputs.sub_path }}"
-            cd "app_workspace/${{ inputs.sub_path }}"
+            echo "PROJECT_DIR=app_workspace/${{ inputs.sub_path }}" >> $GITHUB_ENV
           else
-            cd app_workspace
+            echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
-          echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
-      - name: Detect Flutter Project
-        run: |
-         PROJECT_DIR=$(find app_workspace -name pubspec.yaml | head -n 1 | xargs dirname)
-         echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-         echo "Detected Flutter project at $PROJECT_DIR"
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '21'
-
-      - name: Setup Android NDK
-        run: |
-          echo "Installing latest stable Android NDK..."
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
-          echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> $PROJECT_DIR/android/local.properties
-      # --- THE ULTIMATE FIX ---
       - name: Force Regenerate Native Folders
         run: |
-          cd $PROJECT_DIR
-          echo "Deleting outdated Android shell..."
+          cd ${{ env.PROJECT_DIR }}
           rm -rf android/
-          echo "Generating brand new, modern Android shell..."
           flutter create --platforms=android .
-      # ------------------------
-
+        
       - name: Install Dependencies
-        run: cd $PROJECT_DIR && flutter pub get
-
-      # --- THE ULTIMATE PLUGIN FIXER ---
+        run: cd ${{ env.PROJECT_DIR }} && flutter pub get
+        
       - name: Fix Broken Plugin Namespaces
         run: |
-          echo "Scanning for broken plugins missing namespaces..."
-          find app_workspace -name "build.gradle" -type f | while read file; do
-            if grep -q "com.android.library" "$file"; then
-              if ! grep -q "namespace" "$file"; then
-                manifest=$(dirname "$file")/src/main/AndroidManifest.xml
-                if [ -f "$manifest" ]; then
-                  package_name=$(grep -oP 'package="\K[^"]+' "$manifest" || echo "com.example.plugin")
-                  sed -i "/android {/a \    namespace '${package_name}'" "$file"
-                fi
+          find ${{ env.PROJECT_DIR }} -name "build.gradle" -type f | while read file; do
+            if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
+              manifest=$(dirname "$file")/src/main/AndroidManifest.xml
+              if [ -f "$manifest" ]; then
+                package_name=$(grep -oP 'package="\K[^"]+' "$manifest" || echo "com.example.plugin")
+                sed -i "/android {/a \    namespace '${package_name}'" "$file"
               fi
             fi
           done
-      # --------------------------------
-      - name: Fix File Timestamps for C++ (Ninja Bug)
-        run: |
-          echo "Updating file timestamps to fix Ninja infinite loop..."
-          find app_workspace -type f -exec touch {} +
-
-      # --- ADD THIS NEW STEP ---
-      - name: Patch Broken C++ Plugins (Pedometer)
-        run: |
-          echo "Patching CMake paths in broken plugins..."
           
-          # Find all plugin build.gradle files
-          find app_workspace -name "build.gradle" -type f | while read file; do
-            # If the plugin is trying to use C++ (CMake)
-            if grep -q "externalNativeBuild" "$file"; then
-              echo "Patching C++ configuration in: $file"
-              
-              # Force the plugin to use the safe version of CMake (3.22.1)
-              # This stops it from downloading broken versions of Ninja
-              sed -i '/externalNativeBuild {/a \        cmake { version "3.22.1" }' "$file"
-            fi
-          done
-
-      # --- UPDATE THIS STEP IN YOUR FLUTTER JOB ---
       - name: Auto-Inject Native Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
+          # The project dir is now an absolute path from the root
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
-        run: |
-          node scripts/inject-permissions.js
-        working-directory: app_workspace
+        run: node scripts/inject-permissions.js
+        # No working-directory needed! Runs from the repository root.
+
       - name: Build Flutter APK
         run: |
-          cd $PROJECT_DIR
-          echo "Cleaning old C++ and Gradle caches..."
+          cd ${{ env.PROJECT_DIR }}
           flutter clean
-          flutter pub get
-          echo "Building APK..."
           flutter build apk --debug
         
       - name: Upload APK Artifact
