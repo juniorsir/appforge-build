@@ -302,5 +302,78 @@
   "ln-capacitor-wifi": {
     "android": ["android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE", "android.permission.ACCESS_FINE_LOCATION"],
     "ios": {"NSLocalNetworkUsageDescription": "This app needs local network access to connect to devices."}
+  },
+  "--- FLUTTER PACKAGES ---": {},
+  "image_picker": {
+    "android": ["android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access to take photos.", "NSPhotoLibraryUsageDescription": "This app needs access to your photos."}
+  },
+  "camera": {
+    "android": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+    "ios": {"NSCameraUsageDescription": "This app needs camera access.", "NSMicrophoneUsageDescription": "This app needs microphone access for video."}
+  },
+  "geolocator": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app needs your location."}
+  },
+  "location": {
+    "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"],
+    "ios": {"NSLocationWhenInUseUsageDescription": "This app needs your location."}
+  },
+  "record": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access."}
+  },
+  "speech_to_text": {
+    "android": ["android.permission.RECORD_AUDIO"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access.", "NSSpeechRecognitionUsageDescription": "This app needs speech recognition."}
+  },
+  "flutter_local_notifications": {
+    "android": ["android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.VIBRATE"],
+    "ios": {}
+  },
+  "firebase_messaging": {
+    "android": ["android.permission.POST_NOTIFICATIONS"],
+    "ios": {}
+  },
+  "qr_code_scanner": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan QR codes."}
+  },
+  "mobile_scanner": {
+    "android": ["android.permission.CAMERA"],
+    "ios": {"NSCameraUsageDescription": "This app requires camera access to scan barcodes."}
+  },
+  "flutter_blue_plus": {
+    "android": ["android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN", "android.permission.BLUETOOTH_CONNECT", "android.permission.BLUETOOTH_SCAN"],
+    "ios": {"NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth.", "NSBluetoothPeripheralUsageDescription": "This app communicates with peripherals."}
+  },
+  "flutter_contacts": {
+    "android": ["android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS"],
+    "ios": {"NSContactsUsageDescription": "This app needs access to contacts."}
+  },
+  "contacts_service": {
+    "android": ["android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS"],
+    "ios": {"NSContactsUsageDescription": "This app needs access to contacts."}
+  },
+  "local_auth": {
+    "android": ["android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"],
+    "ios": {"NSFaceIDUsageDescription": "Face ID is used to securely authenticate you."}
+  },
+  "file_picker": {
+    "android": ["android.permission.READ_EXTERNAL_STORAGE"],
+    "ios": {"NSFileProviderDomainUsageDescription": "This app needs access to read files."}
+  },
+  "device_calendar": {
+    "android": ["android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"],
+    "ios": {"NSCalendarsUsageDescription": "This app needs calendar access.", "NSRemindersUsageDescription": "This app needs reminder access."}
+  },
+  "nfc_manager": {
+    "android": ["android.permission.NFC"],
+    "ios": {"NFCReaderUsageDescription": "This app needs NFC access to read tags."}
+  },
+  "wakelock_plus": {
+    "android": ["android.permission.WAKE_LOCK"],
+    "ios": {}
   }
 }
