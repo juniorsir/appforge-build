@@ -21,6 +21,11 @@ on:
         required: true
         type: string
         default: 'unknown'
+      app_version:
+        description: 'The semantic version of the app build'
+        required: false
+        type: string
+        default: '1.0.0'
 
 jobs:
   # ==========================================
@@ -65,6 +70,8 @@ jobs:
         run: cd app_workspace && npx cap sync android
 
       - name: Auto-Inject Native Permissions
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
         run: node ../scripts/inject-permissions.js
         working-directory: app_workspace
 
