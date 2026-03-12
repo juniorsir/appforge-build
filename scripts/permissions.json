@@ -326,8 +326,9 @@
   },
   "flutter_local_notifications": {
     "android": ["android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.VIBRATE"],
-    "ios": {}
-  },
+    "ios": {},
+    "requiresDesugaring": true 
+  }
   "firebase_messaging": {
     "android": ["android.permission.POST_NOTIFICATIONS"],
     "ios": {}
