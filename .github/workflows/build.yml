@@ -246,8 +246,7 @@ jobs:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
         run: |
-          # Use ../ to go UP one level from app_workspace to find the scripts folder!
-          node ../scripts/inject-permissions.js
+          node scripts/inject-permissions.js
         working-directory: app_workspace
       - name: Build Flutter APK
         run: |
