@@ -320,10 +320,6 @@
     "android": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"],
     "ios": {"NSLocationWhenInUseUsageDescription": "This app needs your location."}
   },
-  "record": {
-    "android": ["android.permission.RECORD_AUDIO"],
-    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access."}
-  },
   "speech_to_text": {
     "android": ["android.permission.RECORD_AUDIO"],
     "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access.", "NSSpeechRecognitionUsageDescription": "This app needs speech recognition."}
@@ -379,5 +375,9 @@
   "pedometer": {
     "android": ["android.permission.ACTIVITY_RECOGNITION"],
     "ios": {"NSMotionUsageDescription": "This app needs to access your motion sensors to count your steps."}
+  },
+  "flutter_sound": {
+    "android": ["android.permission.RECORD_AUDIO", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"],
+    "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
   }
 }
