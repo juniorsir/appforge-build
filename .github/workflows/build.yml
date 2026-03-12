@@ -161,20 +161,17 @@ jobs:
 
       - name: Detect Flutter Project
         run: |
-          PROJECT_DIR=$(find app_workspace -name pubspec.yaml -exec dirname {} \; | head -n 1)
-          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV  
+         PROJECT_DIR=$(find app_workspace -name pubspec.yaml | head -n 1 | xargs dirname)
+         echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+         echo "Detected Flutter project at $PROJECT_DIR"
           
       - name: Install Dependencies
         run: cd $PROJECT_DIR && flutter pub get
 
       - name: Fix Old Flutter Gradle Plugin
         run: |
-          FILE="app_workspace/android/app/build.gradle"
-
-          if grep -q "app_plugin_loader.gradle" "$FILE"; then
-            echo "Old Flutter Gradle plugin detected. Removing..."
-            sed -i '/app_plugin_loader.gradle/d' "$FILE"
-          fi
+          find app_workspace -type f -name "*.gradle" -exec sed -i '/app_plugin_loader.gradle/d' {} +
+      
       - name: Build Flutter APK
         run: cd $PROJECT_DIR && flutter build apk --debug
         
