@@ -244,11 +244,10 @@ jobs:
       - name: Auto-Inject Native Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
-          # Tell the Node script exactly where the project is!
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
         run: |
-          # We run the script from the ROOT of the workspace now
-          node scripts/inject-permissions.js
+          # Use ../ to go UP one level from app_workspace to find the scripts folder!
+          node ../scripts/inject-permissions.js
         working-directory: app_workspace
       - name: Build Flutter APK
         run: |
