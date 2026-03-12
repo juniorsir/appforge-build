@@ -141,7 +141,7 @@ jobs:
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: '3.24.3' # Use a known, highly stable modern version
           channel: stable
           cache: true
 
@@ -164,13 +164,15 @@ jobs:
          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
          echo "Detected Flutter project at $PROJECT_DIR"
           
-      # --- THE FIX IS HERE ---
-      - name: Migrate Old Flutter Projects
+      # --- THE ULTIMATE FIX ---
+      - name: Force Regenerate Native Folders
         run: |
           cd $PROJECT_DIR
-          echo "Automatically upgrading native Android files to latest Flutter standards..."
+          echo "Deleting outdated Android shell..."
+          rm -rf android/
+          echo "Generating brand new, modern Android shell..."
           flutter create --platforms=android .
-      # -----------------------
+      # ------------------------
 
       - name: Install Dependencies
         run: cd $PROJECT_DIR && flutter pub get
