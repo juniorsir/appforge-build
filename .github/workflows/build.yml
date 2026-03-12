@@ -26,6 +26,11 @@ on:
         required: false
         type: string
         default: '1.0.0'
+      sub_path:
+        description: 'The sub-directory of the project within the monorepo'
+        required: false
+        type: string
+        default: '.'
 
 jobs:
   # ==========================================
@@ -157,6 +162,16 @@ jobs:
           TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
           unzip -o "$TARGET_DIR/source.zip" -d app_workspace
 
+      - name: Navigate to Sub-Project
+        run: |
+          # If a sub_path was provided, cd into it. Otherwise, stay in the root.
+          if [ "${{ inputs.sub_path }}" != "." ]; then
+            echo "Navigating to sub-project at app_workspace/${{ inputs.sub_path }}"
+            cd "app_workspace/${{ inputs.sub_path }}"
+          else
+            cd app_workspace
+          fi
+          echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
       - name: Detect Flutter Project
         run: |
          PROJECT_DIR=$(find app_workspace -name pubspec.yaml | head -n 1 | xargs dirname)
