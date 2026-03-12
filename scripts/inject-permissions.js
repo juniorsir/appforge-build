@@ -5,7 +5,8 @@ const path = require('path');
 console.log("🤖 Running AppForge Universal Permission Injector...");
 
 const appVersion = process.env.APP_VERSION || '1.0.0';
-
+const baseDir = process.env.PROJECT_DIR ? path.resolve(process.env.PROJECT_DIR) : process.cwd();
+console.log(`-> Scanning project in directory: ${baseDir}`);
 // --- Universal Paths ---
 const manifestPath = path.join('android', 'app', 'src', 'main', 'AndroidManifest.xml');
 const gradlePath = path.join('android', 'app', 'build.gradle');
@@ -15,6 +16,8 @@ const plistPath = fs.existsSync(path.join('ios', 'Runner', 'Info.plist'))
     ? path.join('ios', 'Runner', 'Info.plist') 
     : path.join('ios', 'App', 'App', 'Info.plist');
 
+const packageJsonPath = path.join(baseDir, 'package.json');
+const pubspecYamlPath = path.join(baseDir, 'pubspec.yaml');
 // =================================================================
 // 1. VERSION INJECTION (Same as before)
 // =================================================================
@@ -36,30 +39,28 @@ if (fs.existsSync(plistPath)) {
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumber}" "${plistPath}"`);
     } catch (e) {}
 }
-
 // =================================================================
 // 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
 let deps = {};
 
-if (fs.existsSync('package.json')) {
+if (fs.existsSync(packageJsonPath)) {
     console.log("-> Detected Web/Capacitor project (package.json)");
-    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
 } 
-else if (fs.existsSync('pubspec.yaml')) {
+else if (fs.existsSync(pubspecYamlPath)) {
     console.log("-> Detected Flutter project (pubspec.yaml)");
-    const pubspec = fs.readFileSync('pubspec.yaml', 'utf8');
+    const pubspec = fs.readFileSync(pubspecYamlPath, 'utf8');
     
-    // Simple YAML parser to extract Flutter dependencies
     let inDeps = false;
     pubspec.split('\n').forEach(line => {
         if (line.startsWith('dependencies:')) { inDeps = true; return; }
-        if (line.match(/^[a-zA-Z]/)) { inDeps = false; } // Exited dependencies block
+        if (line.match(/^[a-zA-Z]/)) { inDeps = false; } 
         
         if (inDeps && line.trim().length > 0 && !line.trim().startsWith('#')) {
             const match = line.match(/^\s+([a-zA-Z0-9_-]+):/);
-            if (match) deps[match[1]] = true; // Add package to list
+            if (match) deps[match[1]] = true; 
         }
     });
 } 
@@ -67,7 +68,6 @@ else {
     console.log("No package.json or pubspec.yaml found. Skipping permissions.");
     process.exit(0);
 }
-
 // =================================================================
 // 3. PERMISSION INJECTION
 // =================================================================
