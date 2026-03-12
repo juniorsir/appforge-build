@@ -225,6 +225,14 @@ jobs:
             fi
           done
 
+      - name: Auto-Inject Native Permissions & Version
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
+        run: |
+          # Node 22 is already installed by GitHub Actions
+          node ../scripts/inject-permissions.js
+        working-directory: app_workspace
+
       - name: Build Flutter APK
         run: |
           cd $PROJECT_DIR
