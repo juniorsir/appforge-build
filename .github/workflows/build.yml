@@ -134,7 +134,7 @@ jobs:
           path: app_workspace/ios-project.zip
 
   # ==========================================
-  # 2. FLUTTER BUILDER (FINAL VERSION)
+  # 2. FLUTTER BUILDER (Corrected Order)
   # ==========================================
   build-flutter:
     if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
@@ -159,27 +159,24 @@ jobs:
         run: unzip -o "apps/${{ inputs.app_id }}/source.zip" -d app_workspace
 
       - name: Set Project Directory
-        id: set_project_dir # Give this step an ID
+        id: set_project_dir
         run: |
-          # If a sub_path is provided, the project is inside it. Otherwise, it's the root.
           if [ "${{ inputs.sub_path }}" != "." ]; then
             echo "PROJECT_DIR=app_workspace/${{ inputs.sub_path }}" >> $GITHUB_ENV
           else
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      - name: Force Regenerate Native Folders
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          rm -rf android/
-          flutter create --platforms=android .
-        
+      # --- CORRECTED ORDER ---
+      # 1. Install dependencies first, so all plugins are downloaded.
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
-        
+
+      # 2. Now that the broken plugins are on the server, fix them!
       - name: Fix Broken Plugin Namespaces
         run: |
-          find ${{ env.PROJECT_DIR }} -name "build.gradle" -type f | while read file; do
+          # The search path must be the root of the unzipped folder
+          find app_workspace -name "build.gradle" -type f | while read file; do
             if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
               manifest=$(dirname "$file")/src/main/AndroidManifest.xml
               if [ -f "$manifest" ]; then
@@ -188,20 +185,18 @@ jobs:
               fi
             fi
           done
-          
-      - name: Auto-Inject Native Permissions & Version
+      
+      # 3. Inject our own app's permissions
+      - name: Auto-Inject App Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
-          # The project dir is now an absolute path from the root
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
         run: node scripts/inject-permissions.js
-        # No working-directory needed! Runs from the repository root.
 
+      # 4. Now, it is safe to build
       - name: Build Flutter APK
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          flutter clean
-          flutter build apk --debug
+        run: cd ${{ env.PROJECT_DIR }} && flutter build apk --debug
+      # ------------------------
         
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
