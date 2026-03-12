@@ -162,7 +162,18 @@ jobs:
          PROJECT_DIR=$(find app_workspace -name pubspec.yaml | head -n 1 | xargs dirname)
          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
          echo "Detected Flutter project at $PROJECT_DIR"
-          
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Setup Android NDK
+        run: |
+          echo "Installing latest stable Android NDK..."
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+          echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> $PROJECT_DIR/android/local.properties
       # --- THE ULTIMATE FIX ---
       - name: Force Regenerate Native Folders
         run: |
@@ -207,10 +218,13 @@ jobs:
       # --------------------------------
 
       - name: Build Flutter APK
-        run: cd $PROJECT_DIR && flutter build apk --debug
-
-      - name: Build Flutter APK
-        run: cd $PROJECT_DIR && flutter build apk --debug
+        run: |
+          cd $PROJECT_DIR
+          echo "Cleaning old C++ and Gradle caches..."
+          flutter clean
+          flutter pub get
+          echo "Building APK..."
+          flutter build apk --debug
         
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
