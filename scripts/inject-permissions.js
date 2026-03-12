@@ -114,18 +114,42 @@ else {
 // =================================================================
 // 3. PERMISSION INJECTION
 // =================================================================
-console.log("-> Analyzing installed plugins for permissions...");
+console.log("-> Analyzing installed plugins for required native features...");
 const permsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'permissions.json'), 'utf8'));
 
 let androidPerms = new Set(permsData.base?.android || []);
 let iosPerms = { ...(permsData.base?.ios || {}) };
+let needsDesugaring = false;
 
+// Now that `deps` is initialized, we can loop through it
 for (const plugin of Object.keys(deps)) {
     if (permsData[plugin]) {
         console.log(`    - Found known plugin: ${plugin}`);
         (permsData[plugin].android || []).forEach(p => androidPerms.add(p));
         Object.assign(iosPerms, permsData[plugin].ios || {});
+        
+        // Check for the desugaring flag
+        if (permsData[plugin].requiresDesugaring) {
+            needsDesugaring = true;
+            console.log(`    - Plugin ${plugin} requires Android core library desugaring.`);
+        }
     }
+}
+
+// Inject Desugaring if needed
+if (needsDesugaring && fs.existsSync(gradlePath)) {
+    console.log("-> Enabling core library desugaring...");
+    try {
+        let gradle = fs.readFileSync(gradlePath, 'utf8');
+        if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
+            gradle = gradle.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"');
+        }
+        if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
+            gradle = gradle.replace(/compileOptions\s*{/, 'compileOptions {\n        coreLibraryDesugaringEnabled = true');
+        }
+        fs.writeFileSync(gradlePath, gradle);
+        console.log("    + Android: Enabled desugaring in build.gradle");
+    } catch (e) { console.error("    - Android: Failed to enable desugaring.", e); }
 }
 
 if (fs.existsSync(manifestPath)) {
