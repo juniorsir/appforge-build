@@ -157,7 +157,13 @@ jobs:
       - name: Unzip Uploaded Source
         run: |
           TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
-          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+          unzip -o "$TARGET_DIR/source.zip" -d temp_workspace
+
+          # Detect flutter project folder
+          PROJECT_DIR=$(find temp_workspace -maxdepth 2 -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
+          echo "Detected Flutter project at: $PROJECT_DIR"
+          mkdir app_workspace
+          cp -r $PROJECT_DIR/* app_workspace/
           
       - name: Install Dependencies
         run: cd app_workspace && flutter pub get
