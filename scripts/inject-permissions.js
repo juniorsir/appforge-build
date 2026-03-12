@@ -2,92 +2,107 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const path = require('path');
 
-console.log("🤖 Running AppForge Injector (Version & Permissions)...");
+console.log("🤖 Running AppForge Universal Permission Injector...");
 
-// --- Define Paths and Config ---
+const appVersion = process.env.APP_VERSION || '1.0.0';
+
+// --- Universal Paths ---
 const manifestPath = path.join('android', 'app', 'src', 'main', 'AndroidManifest.xml');
-const gradlePath = path.join('android', 'app', 'build.gradle'); // For Android version
-const plistPath = path.join('ios', 'App', 'App', 'Info.plist'); // For iOS version
-const appVersion = process.env.APP_VERSION || '1.0.0'; // Read version from env var
+const gradlePath = path.join('android', 'app', 'build.gradle');
+
+// Capacitor uses ios/App/App, Flutter uses ios/Runner
+const plistPath = fs.existsSync(path.join('ios', 'Runner', 'Info.plist')) 
+    ? path.join('ios', 'Runner', 'Info.plist') 
+    : path.join('ios', 'App', 'App', 'Info.plist');
 
 // =================================================================
-// 1. VERSION INJECTION
+// 1. VERSION INJECTION (Same as before)
 // =================================================================
 console.log(`-> Injecting app version: ${appVersion}`);
-
-// Android Version Injection
 if (fs.existsSync(gradlePath)) {
     try {
         let gradle = fs.readFileSync(gradlePath, 'utf8');
-        // Use a robust regex to find and replace versionName
         gradle = gradle.replace(/versionName\s+['"].*['"]/, `versionName "${appVersion}"`);
-        // Also create and update versionCode (e.g., 1.0.1 -> 10001)
         const versionCode = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
         gradle = gradle.replace(/versionCode\s+\d+/, `versionCode ${versionCode}`);
         fs.writeFileSync(gradlePath, gradle);
-        console.log(`    + Android: Set version to ${appVersion} (Code: ${versionCode})`);
-    } catch(e) {
-        console.error('    - Android: Failed to inject version number.', e);
-    }
+    } catch(e) {}
 }
 
-// iOS Version Injection
 if (fs.existsSync(plistPath)) {
     try {
-        // CFBundleShortVersionString is the display version (e.g., "1.0.1")
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${appVersion}" "${plistPath}"`);
-        // CFBundleVersion is the build number, we'll use the same as android's versionCode for consistency
         const buildNumber = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumber}" "${plistPath}"`);
-        console.log(`    + iOS: Set version to ${appVersion} (Build: ${buildNumber})`);
-    } catch (e) {
-        console.error("    - iOS: Failed to inject version number.", e);
-    }
+    } catch (e) {}
 }
 
 // =================================================================
-// 2. PERMISSION INJECTION
+// 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
+let deps = {};
 
-// Check if package.json exists (required for permission logic)
-if (!fs.existsSync('package.json')) {
-    console.log("No package.json found. Skipping permission injection.");
-} else {
-    console.log("-> Analyzing installed plugins for permissions...");
+if (fs.existsSync('package.json')) {
+    console.log("-> Detected Web/Capacitor project (package.json)");
     const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-    const permsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'permissions.json'), 'utf8'));
+    deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+} 
+else if (fs.existsSync('pubspec.yaml')) {
+    console.log("-> Detected Flutter project (pubspec.yaml)");
+    const pubspec = fs.readFileSync('pubspec.yaml', 'utf8');
     
-    let androidPerms = new Set(permsData.base?.android || []);
-    let iosPerms = { ...(permsData.base?.ios || {}) };
+    // Simple YAML parser to extract Flutter dependencies
+    let inDeps = false;
+    pubspec.split('\n').forEach(line => {
+        if (line.startsWith('dependencies:')) { inDeps = true; return; }
+        if (line.match(/^[a-zA-Z]/)) { inDeps = false; } // Exited dependencies block
+        
+        if (inDeps && line.trim().length > 0 && !line.trim().startsWith('#')) {
+            const match = line.match(/^\s+([a-zA-Z0-9_-]+):/);
+            if (match) deps[match[1]] = true; // Add package to list
+        }
+    });
+} 
+else {
+    console.log("No package.json or pubspec.yaml found. Skipping permissions.");
+    process.exit(0);
+}
 
-    for (const plugin of Object.keys(deps)) {
-        if (permsData[plugin]) {
-            console.log(`    - Found plugin: ${plugin}`);
-            (permsData[plugin].android || []).forEach(p => androidPerms.add(p));
-            Object.assign(iosPerms, permsData[plugin].ios || {});
+// =================================================================
+// 3. PERMISSION INJECTION
+// =================================================================
+console.log("-> Analyzing installed plugins for permissions...");
+const permsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'permissions.json'), 'utf8'));
+
+let androidPerms = new Set(permsData.base?.android || []);
+let iosPerms = { ...(permsData.base?.ios || {}) };
+
+for (const plugin of Object.keys(deps)) {
+    if (permsData[plugin]) {
+        console.log(`    - Found known plugin: ${plugin}`);
+        (permsData[plugin].android || []).forEach(p => androidPerms.add(p));
+        Object.assign(iosPerms, permsData[plugin].ios || {});
+    }
+}
+
+if (fs.existsSync(manifestPath)) {
+    let manifest = fs.readFileSync(manifestPath, 'utf8');
+    for (const p of androidPerms) {
+        if (!manifest.includes(`android:name="${p}"`)) {
+            manifest = manifest.replace('</manifest>', `    <uses-permission android:name="${p}" />\n</manifest>`);
+            console.log(`    + Android: Added permission ${p}`);
         }
     }
+    fs.writeFileSync(manifestPath, manifest);
+}
 
-    if (fs.existsSync(manifestPath)) {
-        let manifest = fs.readFileSync(manifestPath, 'utf8');
-        for (const p of androidPerms) {
-            if (!manifest.includes(`android:name="${p}"`)) {
-                manifest = manifest.replace('</manifest>', `    <uses-permission android:name="${p}" />\n</manifest>`);
-                console.log(`    + Android: Added permission ${p}`);
-            }
-        }
-        fs.writeFileSync(manifestPath, manifest);
-    }
-
-    if (fs.existsSync(plistPath)) {
-        for (const [key, desc] of Object.entries(iosPerms)) {
-            try {
-                execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'});
-            } catch (e) {
-                execSync(`/usr/libexec/PlistBuddy -c "Add :${key} string '${desc}'" "${plistPath}"`);
-                console.log(`    + iOS: Added permission key ${key}`);
-            }
+if (fs.existsSync(plistPath)) {
+    for (const [key, desc] of Object.entries(iosPerms)) {
+        try {
+            execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'});
+        } catch (e) {
+            execSync(`/usr/libexec/PlistBuddy -c "Add :${key} string '${desc}'" "${plistPath}"`);
+            console.log(`    + iOS: Added permission key ${key}`);
         }
     }
 }
