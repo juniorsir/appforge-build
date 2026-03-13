@@ -216,7 +216,6 @@ jobs:
           PACKAGE_ID: ${{ inputs.package_id }}
         run: node scripts/inject-permissions.js
       
-      # --- ADD THIS NEW STEP RIGHT BEFORE 'Build Flutter APK' ---
       - name: Patch Gradle to use AppForge Metadata
         run: |
           cd ${{ env.PROJECT_DIR }}/android/app
@@ -228,7 +227,6 @@ jobs:
           # 2. Patch resValue for App Name (This forces the launcher icon name)
           sed -i '/defaultConfig {/a \        resValue("string", "app_name", localProperties.getProperty("flutter.appName"))' build.gradle.kts || true
           sed -i '/defaultConfig {/a \        resValue "string", "app_name", localProperties.getProperty("flutter.appName")' build.gradle || true
-      # --------------------------------------------------------
       # --- UPDATE THIS STEP ---
       - name: Build Flutter APK
         run: |
