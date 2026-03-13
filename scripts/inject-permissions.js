@@ -98,15 +98,15 @@ for (const plugin of Object.keys(deps)) {
         }
     }
 }
-// --- Inside inject-permissions.js ---
-
 // =================================================================
 // 3. DESUGARING INJECTION
 // =================================================================
 if (needsDesugaring) {
     console.log("-> Enabling core library desugaring...");
 
-    // Determine which file exists
+    const gradleAppPathGroovy = path.join(baseDir, 'android', 'app', 'build.gradle');
+    const gradleAppPathKts = path.join(baseDir, 'android', 'app', 'build.gradle.kts');
+
     let targetGradlePath = null;
     let isKts = false;
 
@@ -125,15 +125,7 @@ if (needsDesugaring) {
                 // --- KOTLIN SCRIPT (.kts) INJECTION ---
                 console.log("    - Detected Kotlin Script (build.gradle.kts)");
                 
-                // 1. Add dependency
-                if (!gradle.includes('coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:')) {
-                    gradle = gradle.replace(
-                        /dependencies\s*\{/, 
-                        'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")'
-                    );
-                }
-
-                // 2. Add compileOptions
+                // 1. Enable the compile option
                 if (gradle.includes('compileOptions {')) {
                     if (!gradle.includes('isCoreLibraryDesugaringEnabled = true')) {
                         gradle = gradle.replace(
@@ -148,19 +140,16 @@ if (needsDesugaring) {
                     );
                 }
 
+                // 2. Add the dependency (FOOLPROOF APPEND)
+                if (!gradle.includes('coreLibraryDesugaring(')) {
+                    gradle += '\n\n// Injected by AppForge\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")\n}\n';
+                }
+
             } else {
                 // --- GROOVY SCRIPT (.gradle) INJECTION ---
                 console.log("    - Detected Groovy Script (build.gradle)");
                 
-                // 1. Add dependency
-                if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
-                    gradle = gradle.replace(
-                        /dependencies\s*\{/, 
-                        'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"'
-                    );
-                }
-
-                // 2. Add compileOptions
+                // 1. Enable the compile option
                 if (gradle.includes('compileOptions {')) {
                     if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
                         gradle = gradle.replace(
@@ -174,6 +163,11 @@ if (needsDesugaring) {
                         'android {\n    compileOptions {\n        coreLibraryDesugaringEnabled = true\n    }\n'
                     );
                 }
+
+                // 2. Add the dependency (FOOLPROOF APPEND)
+                if (!gradle.includes('coreLibraryDesugaring "')) {
+                    gradle += '\n\n// Injected by AppForge\ndependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"\n}\n';
+                }
             }
 
             fs.writeFileSync(targetGradlePath, gradle);
@@ -186,6 +180,7 @@ if (needsDesugaring) {
          console.log("    - Android: Could not find build.gradle or build.gradle.kts to inject desugaring.");
     }
 }
+
 // Inject Android Permissions
 if (fs.existsSync(manifestPath)) {
     let manifest = fs.readFileSync(manifestPath, 'utf8');
