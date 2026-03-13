@@ -167,12 +167,22 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      - name: Force Regenerate Native Folders
+      # --- THIS IS THE ULTIMATE FIX FOR FLUTTER METADATA ---
+      - name: Force Regenerate Native Folders with Correct Metadata
         run: |
           cd ${{ env.PROJECT_DIR }}
+          
+          # 1. Extract the organization from the package ID
+          # e.g., "com.vaultos.app" -> "com.vaultos"
+          ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
+          
+          echo "Deleting outdated Android shell..."
           rm -rf android/
-          flutter create --platforms=android .
-
+          
+          echo "Generating new Android shell for organization: $ORG_NAME"
+          # 2. Tell flutter create the package ID from the start!
+          flutter create --org $ORG_NAME --platforms=android .
+      # ----------------------------------------------------
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
