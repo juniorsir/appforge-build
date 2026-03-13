@@ -181,7 +181,6 @@ jobs:
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
-      # 3. Patch any broken third-party plugins.
       - name: Fix Broken Plugins (Namespaces & Kotlin)
         run: |
           find app_workspace -name "build.gradle" -type f | while read file; do
@@ -194,15 +193,19 @@ jobs:
               fi
             fi
             
-            # --- THE NEW KOTLIN PATCH ---
-            # 2. Prevent Kotlin warnings (like toLowerCase deprecation) from crashing the build!
-            # If the plugin uses Kotlin, append the command to ignore warnings.
+            # 2. Prevent Kotlin warnings
             if grep -q "kotlin" "$file"; then
-              echo "" >> "$file" # Add a newline safely
+              echo "" >> "$file" 
               echo "tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { suppressWarnings = true; allWarningsAsErrors = false } }" >> "$file"
             fi
-            # ----------------------------
           done
+          
+          # --- THE ULTIMATE KOTLIN SOURCE PATCH ---
+          echo "Patching broken Kotlin source code in outdated plugins..."
+          # This finds all .kt files in the pub-cache and replaces .toLowerCase(locale) with .lowercase()
+          find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toLowerCase(/.lowercase(/g' {} +
+          find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toUpperCase(/.uppercase(/g' {} +
+          # ----------------------------------------
       
       # 4. Inject permissions AND version into the newly generated native files.
       - name: Auto-Inject App Permissions & Version
