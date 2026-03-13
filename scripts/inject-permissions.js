@@ -9,6 +9,8 @@ const appVersion = process.env.APP_VERSION || '1.0.0';
 const appName = process.env.APP_NAME || 'AppForge App';
 const packageId = process.env.PACKAGE_ID || 'com.appforge.app';
 const baseDir = process.env.PROJECT_DIR ? path.resolve(process.env.PROJECT_DIR) : process.cwd();
+
+// Build Number Calculation (e.g., "1.0.5" -> 10005)
 const buildNumber = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
 
 console.log(`-> Target Directory: ${baseDir}`);
@@ -46,21 +48,19 @@ if (fs.existsSync(pubspecYamlPath)) {
     } catch(e) { console.error("    - Failed to update pubspec version.", e); }
 }
 
-// B. Inject into build.gradle (Package ID)
+// B. Inject into build.gradle (Application ID ONLY - We do NOT touch namespace here!)
 if (targetGradlePath) {
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         gradle = gradle.replace(/applicationId\s*=?\s*["'][^"']+["']/g, `applicationId = "${packageId}"`);
         gradle = gradle.replace(/applicationId\s+["'][^"']+["']/g, `applicationId "${packageId}"`);
-        gradle = gradle.replace(/namespace\s*=?\s*["'][^"']+["']/g, `namespace = "${packageId}"`);
-        gradle = gradle.replace(/namespace\s+["'][^"']+["']/g, `namespace "${packageId}"`);
         fs.writeFileSync(targetGradlePath, gradle);
         console.log(`    + Android: Forced Gradle applicationId to "${packageId}"`);
     } catch(e) { console.error("    - Failed to inject Package ID into Gradle.", e); }
 }
 
-// C. Inject iOS Version
-if (fs.existsSync(plistPath)) {
+// C. Inject iOS Version (Safe Check)
+if (process.platform === 'darwin' && fs.existsSync(plistPath)) {
     try {
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${appVersion}" "${plistPath}"`);
         execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumber}" "${plistPath}"`);
@@ -106,7 +106,7 @@ if (fs.existsSync(propertiesPath) && Object.keys(deps).includes('permission_hand
 }
 
 // =================================================================
-// 4. DESUGARING & PERMISSION INJECTION
+// 4. DESUGARING INJECTION
 // =================================================================
 console.log("-> Analyzing installed plugins for required native features...");
 const permsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'permissions.json'), 'utf8'));
@@ -132,6 +132,7 @@ if (needsDesugaring && targetGradlePath) {
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
+
         if (isKts) {
             if (!gradle.includes('isCoreLibraryDesugaringEnabled = true')) {
                 gradle = gradle.includes('compileOptions {') ? gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true') : gradle.replace(/android\s*\{/, 'android {\n    compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n    }\n');
@@ -154,34 +155,30 @@ if (needsDesugaring && targetGradlePath) {
 if (fs.existsSync(manifestPath)) {
     try {
         let manifest = fs.readFileSync(manifestPath, 'utf8');
+        
+        // Ensure tools namespace
         if (!manifest.includes('xmlns:tools=')) manifest = manifest.replace('<manifest', '<manifest xmlns:tools="http://schemas.android.com/tools"');
-        if (manifest.includes('package=')) {
-            manifest = manifest.replace(/package="[^"]+"/g, `package="${packageId}"`);
-        } else {
-            manifest = manifest.replace('<manifest', `<manifest package="${packageId}"`);
-        }
+
+        // Force App Name and tools:replace (Notice we do NOT touch package="")
         manifest = manifest.replace(/android:label="[^"]+"/g, `android:label="${appName}"`);
         manifest = manifest.replace(/<application/g, '<application tools:replace="android:label"');
+
+        // Inject Nuclear Permissions
         for (const p of androidPerms) {
             const permRegex = new RegExp(`<uses-permission android:name="${p}"[^>]*>`, 'g');
             manifest = manifest.replace(permRegex, '');
             manifest = manifest.replace('</manifest>', `    <uses-permission android:name="${p}" tools:node="replace" />\n</manifest>`);
         }
+        
         fs.writeFileSync(manifestPath, manifest);
         console.log(`    + Android: Successfully forced App Name & Permissions.`);
     } catch(e) { console.error("    - Android: Failed to inject nuclear manifest.", e); }
 }
 
-// Inject iOS Permissions
-// --- Inside inject-permissions.js, at the very bottom ---
-
-// Inject iOS Permissions (ONLY if running on a macOS server!)
+// Inject iOS Permissions (ONLY on macOS runners)
 if (process.platform === 'darwin' && fs.existsSync(plistPath)) {
-    console.log("-> Injecting iOS permissions into Info.plist...");
     for (const [key, desc] of Object.entries(iosPerms)) {
-        try { 
-            execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'}); 
-        } 
+        try { execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'}); } 
         catch (e) {
             execSync(`/usr/libexec/PlistBuddy -c "Add :${key} string '${desc}'" "${plistPath}"`);
             console.log(`    + iOS: Added permission key ${key}`);
@@ -190,4 +187,5 @@ if (process.platform === 'darwin' && fs.existsSync(plistPath)) {
 } else if (Object.keys(iosPerms).length > 0) {
     console.log("-> Skipping iOS permission injection (not running on macOS).");
 }
+
 console.log("✅ Injection complete.");
