@@ -227,31 +227,22 @@ jobs:
           # 2. Patch resValue for App Name (This forces the launcher icon name)
           sed -i '/defaultConfig {/a \        resValue("string", "app_name", localProperties.getProperty("flutter.appName"))' build.gradle.kts || true
           sed -i '/defaultConfig {/a \        resValue "string", "app_name", localProperties.getProperty("flutter.appName")' build.gradle || true
-      # --- UPDATE THIS STEP ---
+      
       - name: Build Flutter APK
         run: |
           cd ${{ env.PROJECT_DIR }}
           echo "Cleaning old C++ and Gradle caches..."
           flutter clean
           
-          # 1. Force the App Version (For Flutter)
-          # Flutter reads build-name and build-number natively from the CLI args
+          # Force the App Version via CLI
           BUILD_NAME="${{ inputs.app_version }}"
           BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
           
-          # 2. Force the Package ID (For Android/Gradle)
-          # We write this into local.properties so Gradle can read it
-          echo "flutter.applicationId=${{ inputs.package_id }}" >> android/local.properties
-          
-          # 3. Force the App Name (For Android/Gradle)
-          # We write this into local.properties so Gradle can read it
-          echo "flutter.appName=${{ inputs.app_name }}" >> android/local.properties
-          
           echo "Building APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
           
-          # 4. We MUST pass the build-name and build-number directly to the compiler!
+          # Pass the build-name and build-number directly to the compiler!
           flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
-        
+          
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
