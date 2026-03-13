@@ -182,10 +182,10 @@ jobs:
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
       # 3. Patch any broken third-party plugins.
-      - name: Fix Broken Plugin Namespaces
+      - name: Fix Broken Plugins (Namespaces & Kotlin)
         run: |
-          # The search path must be the root of the unzipped folder
           find app_workspace -name "build.gradle" -type f | while read file; do
+            # 1. Fix missing namespaces
             if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
               manifest=$(dirname "$file")/src/main/AndroidManifest.xml
               if [ -f "$manifest" ]; then
@@ -193,6 +193,15 @@ jobs:
                 sed -i "/android {/a \    namespace '${package_name}'" "$file"
               fi
             fi
+            
+            # --- THE NEW KOTLIN PATCH ---
+            # 2. Prevent Kotlin warnings (like toLowerCase deprecation) from crashing the build!
+            # If the plugin uses Kotlin, append the command to ignore warnings.
+            if grep -q "kotlin" "$file"; then
+              echo "" >> "$file" # Add a newline safely
+              echo "tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { suppressWarnings = true; allWarningsAsErrors = false } }" >> "$file"
+            fi
+            # ----------------------------
           done
       
       # 4. Inject permissions AND version into the newly generated native files.
