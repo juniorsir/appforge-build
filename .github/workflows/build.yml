@@ -214,10 +214,43 @@ jobs:
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
         run: node scripts/inject-permissions.js
       
-      # 5. Now, it is 100% safe to build.
+      # --- ADD THIS NEW STEP RIGHT BEFORE 'Build Flutter APK' ---
+      - name: Patch Gradle to use AppForge Metadata
+        run: |
+          cd ${{ env.PROJECT_DIR }}/android/app
+          
+          # 1. Patch applicationId
+          sed -i 's/applicationId = .*/applicationId = localProperties.getProperty("flutter.applicationId")/' build.gradle.kts || true
+          sed -i 's/applicationId .*/applicationId localProperties.getProperty("flutter.applicationId")/' build.gradle || true
+          
+          # 2. Patch resValue for App Name (This forces the launcher icon name)
+          sed -i '/defaultConfig {/a \        resValue("string", "app_name", localProperties.getProperty("flutter.appName"))' build.gradle.kts || true
+          sed -i '/defaultConfig {/a \        resValue "string", "app_name", localProperties.getProperty("flutter.appName")' build.gradle || true
+      # --------------------------------------------------------
+      # --- UPDATE THIS STEP ---
       - name: Build Flutter APK
-        run: cd ${{ env.PROJECT_DIR }} && flutter build apk --debug
-      # ------------------------
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          echo "Cleaning old C++ and Gradle caches..."
+          flutter clean
+          
+          # 1. Force the App Version (For Flutter)
+          # Flutter reads build-name and build-number natively from the CLI args
+          BUILD_NAME="${{ inputs.app_version }}"
+          BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
+          
+          # 2. Force the Package ID (For Android/Gradle)
+          # We write this into local.properties so Gradle can read it
+          echo "flutter.applicationId=${{ inputs.package_id }}" >> android/local.properties
+          
+          # 3. Force the App Name (For Android/Gradle)
+          # We write this into local.properties so Gradle can read it
+          echo "flutter.appName=${{ inputs.app_name }}" >> android/local.properties
+          
+          echo "Building APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
+          
+          # 4. We MUST pass the build-name and build-number directly to the compiler!
+          flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
         
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
