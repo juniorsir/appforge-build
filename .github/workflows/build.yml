@@ -212,6 +212,8 @@ jobs:
         env:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
+          APP_NAME: ${{ inputs.app_name }}         # <-- Make sure these are here
+          PACKAGE_ID: ${{ inputs.package_id }}
         run: node scripts/inject-permissions.js
       
       # --- ADD THIS NEW STEP RIGHT BEFORE 'Build Flutter APK' ---
