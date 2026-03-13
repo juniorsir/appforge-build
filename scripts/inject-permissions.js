@@ -11,6 +11,8 @@ console.log(`-> Scanning project in directory: ${baseDir}`);
 
 const manifestPath = path.join(baseDir, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
 const gradlePath = path.join(baseDir, 'android', 'app', 'build.gradle');
+const gradleAppPathGroovy = path.join(baseDir, 'android', 'app', 'build.gradle');
+const gradleAppPathKts = path.join(baseDir, 'android', 'app', 'build.gradle.kts');
 const plistPath = fs.existsSync(path.join(baseDir, 'ios', 'Runner', 'Info.plist')) 
     ? path.join(baseDir, 'ios', 'Runner', 'Info.plist') 
     : path.join(baseDir, 'ios', 'App', 'App', 'Info.plist');
@@ -98,50 +100,92 @@ for (const plugin of Object.keys(deps)) {
 }
 // --- Inside inject-permissions.js ---
 
-// Inject Desugaring if needed
-if (needsDesugaring && fs.existsSync(gradlePath)) {
+// =================================================================
+// 3. DESUGARING INJECTION
+// =================================================================
+if (needsDesugaring) {
     console.log("-> Enabling core library desugaring...");
-    try {
-        let gradle = fs.readFileSync(gradlePath, 'utf8');
 
-        // 1. Add the desugaring dependency
-        if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
-            gradle = gradle.replace(
-                /dependencies\s*\{/, 
-                'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"'
-            );
-        }
+    // Determine which file exists
+    let targetGradlePath = null;
+    let isKts = false;
 
-        // --- THIS IS THE NEW, SMARTER LOGIC ---
-        // 2. Enable the compile option
-        if (gradle.includes('compileOptions {')) {
-            // If the block exists, add the line inside it
-            if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
-                gradle = gradle.replace(
-                    /compileOptions\s*\{/, 
-                    'compileOptions {\n        coreLibraryDesugaringEnabled = true'
-                );
+    if (fs.existsSync(gradleAppPathKts)) {
+        targetGradlePath = gradleAppPathKts;
+        isKts = true;
+    } else if (fs.existsSync(gradleAppPathGroovy)) {
+        targetGradlePath = gradleAppPathGroovy;
+    }
+
+    if (targetGradlePath) {
+        try {
+            let gradle = fs.readFileSync(targetGradlePath, 'utf8');
+
+            if (isKts) {
+                // --- KOTLIN SCRIPT (.kts) INJECTION ---
+                console.log("    - Detected Kotlin Script (build.gradle.kts)");
+                
+                // 1. Add dependency
+                if (!gradle.includes('coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:')) {
+                    gradle = gradle.replace(
+                        /dependencies\s*\{/, 
+                        'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")'
+                    );
+                }
+
+                // 2. Add compileOptions
+                if (gradle.includes('compileOptions {')) {
+                    if (!gradle.includes('isCoreLibraryDesugaringEnabled = true')) {
+                        gradle = gradle.replace(
+                            /compileOptions\s*\{/, 
+                            'compileOptions {\n        isCoreLibraryDesugaringEnabled = true'
+                        );
+                    }
+                } else {
+                    gradle = gradle.replace(
+                        /android\s*\{/, 
+                        'android {\n    compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n    }\n'
+                    );
+                }
+
+            } else {
+                // --- GROOVY SCRIPT (.gradle) INJECTION ---
+                console.log("    - Detected Groovy Script (build.gradle)");
+                
+                // 1. Add dependency
+                if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
+                    gradle = gradle.replace(
+                        /dependencies\s*\{/, 
+                        'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"'
+                    );
+                }
+
+                // 2. Add compileOptions
+                if (gradle.includes('compileOptions {')) {
+                    if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
+                        gradle = gradle.replace(
+                            /compileOptions\s*\{/, 
+                            'compileOptions {\n        coreLibraryDesugaringEnabled = true'
+                        );
+                    }
+                } else {
+                    gradle = gradle.replace(
+                        /android\s*\{/, 
+                        'android {\n    compileOptions {\n        coreLibraryDesugaringEnabled = true\n    }\n'
+                    );
+                }
             }
-        } else {
-            // If the block DOES NOT exist, create it from scratch!
-            gradle = gradle.replace(
-                /android\s*\{/, 
-                'android {\n' +
-                '    compileOptions {\n' +
-                '        coreLibraryDesugaringEnabled = true\n' +
-                '    }\n'
-            );
-        }
-        // ----------------------------------------
 
-        fs.writeFileSync(gradlePath, gradle);
-        console.log("    + Android: Enabled desugaring in build.gradle");
-    } catch (e) { 
-        console.error("    - Android: Failed to enable desugaring.", e); 
+            fs.writeFileSync(targetGradlePath, gradle);
+            console.log(`    + Android: Enabled desugaring successfully.`);
+            
+        } catch (e) {
+            console.error(`    - Android: Failed to enable desugaring in ${targetGradlePath}.`, e);
+        }
+    } else {
+         console.log("    - Android: Could not find build.gradle or build.gradle.kts to inject desugaring.");
     }
 }
-
-
 // Inject Android Permissions
 if (fs.existsSync(manifestPath)) {
     let manifest = fs.readFileSync(manifestPath, 'utf8');
