@@ -159,36 +159,33 @@ if (needsDesugaring && targetGradlePath) {
 // =================================================================
 // 5. NUCLEAR PERMISSION & MANIFEST INJECTION
 // =================================================================
+// B. Force App Name into AndroidManifest.xml (Crucial for Flutter)
 if (fs.existsSync(manifestPath)) {
     try {
         let manifest = fs.readFileSync(manifestPath, 'utf8');
-        
         // Ensure tools namespace
-        if (!manifest.includes('xmlns:tools=')) manifest = manifest.replace('<manifest', '<manifest xmlns:tools="http://schemas.android.com/tools"');
-
-        // Force Package ID
-        if (manifest.includes('package=')) {
-            manifest = manifest.replace(/package="[^"]+"/g, `package="${packageId}"`);
-        } else {
-            manifest = manifest.replace('<manifest', `<manifest package="${packageId}"`);
+        if (!manifest.includes('xmlns:tools=')) {
+            manifest = manifest.replace('<manifest', '<manifest xmlns:tools="http://schemas.android.com/tools"');
         }
-
-        // Force App Name and tools:replace
+        // Force the App Name
         manifest = manifest.replace(/android:label="[^"]+"/g, `android:label="${appName}"`);
         manifest = manifest.replace(/<application/g, '<application tools:replace="android:label"');
-
-        // Inject Nuclear Permissions
-        for (const p of androidPerms) {
-            const permRegex = new RegExp(`<uses-permission android:name="${p}"[^>]*>`, 'g');
-            manifest = manifest.replace(permRegex, '');
-            manifest = manifest.replace('</manifest>', `    <uses-permission android:name="${p}" tools:node="replace" />\n</manifest>`);
-        }
-        
         fs.writeFileSync(manifestPath, manifest);
-        console.log(`    + Android: Successfully forced App Name & Permissions.`);
-    } catch(e) { console.error("    - Android: Failed to inject nuclear manifest.", e); }
+        console.log(`    + Android: Forced App Name to "${appName}"`);
+    } catch(e) {}
 }
 
+// C. Inject into build.gradle (Just as a fallback, Flutter create should handle this)
+let targetGradlePath = fs.existsSync(gradleAppPathKts) ? gradleAppPathKts : (fs.existsSync(gradleAppPathGroovy) ? gradleAppPathGroovy : null);
+
+if (targetGradlePath) {
+    try {
+        let gradle = fs.readFileSync(targetGradlePath, 'utf8');
+        // This is now just a safety check.
+        gradle = gradle.replace(/applicationId\s*=?\s*["'][^"']+["']/g, `applicationId = "${packageId}"`);
+        fs.writeFileSync(targetGradlePath, gradle);
+    } catch(e) {}
+}
 // Inject iOS Permissions
 if (fs.existsSync(plistPath)) {
     for (const [key, desc] of Object.entries(iosPerms)) {
