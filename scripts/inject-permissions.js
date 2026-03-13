@@ -173,14 +173,21 @@ if (fs.existsSync(manifestPath)) {
 }
 
 // Inject iOS Permissions
-if (fs.existsSync(plistPath)) {
+// --- Inside inject-permissions.js, at the very bottom ---
+
+// Inject iOS Permissions (ONLY if running on a macOS server!)
+if (process.platform === 'darwin' && fs.existsSync(plistPath)) {
+    console.log("-> Injecting iOS permissions into Info.plist...");
     for (const [key, desc] of Object.entries(iosPerms)) {
-        try { execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'}); } 
+        try { 
+            execSync(`/usr/libexec/PlistBuddy -c "Print :${key}" "${plistPath}"`, {stdio: 'ignore'}); 
+        } 
         catch (e) {
             execSync(`/usr/libexec/PlistBuddy -c "Add :${key} string '${desc}'" "${plistPath}"`);
             console.log(`    + iOS: Added permission key ${key}`);
         }
     }
+} else if (Object.keys(iosPerms).length > 0) {
+    console.log("-> Skipping iOS permission injection (not running on macOS).");
 }
-
 console.log("✅ Injection complete.");
