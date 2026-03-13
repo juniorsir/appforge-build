@@ -96,24 +96,51 @@ for (const plugin of Object.keys(deps)) {
         }
     }
 }
+// --- Inside inject-permissions.js ---
 
 // Inject Desugaring if needed
 if (needsDesugaring && fs.existsSync(gradlePath)) {
     console.log("-> Enabling core library desugaring...");
     try {
         let gradle = fs.readFileSync(gradlePath, 'utf8');
+
+        // 1. Add the desugaring dependency
         if (!gradle.includes('coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:')) {
-            gradle = gradle.replace(/dependencies\s*\{/, 'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"');
+            gradle = gradle.replace(
+                /dependencies\s*\{/, 
+                'dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"'
+            );
         }
-        if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
-            gradle = gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        coreLibraryDesugaringEnabled = true');
+
+        // --- THIS IS THE NEW, SMARTER LOGIC ---
+        // 2. Enable the compile option
+        if (gradle.includes('compileOptions {')) {
+            // If the block exists, add the line inside it
+            if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
+                gradle = gradle.replace(
+                    /compileOptions\s*\{/, 
+                    'compileOptions {\n        coreLibraryDesugaringEnabled = true'
+                );
+            }
+        } else {
+            // If the block DOES NOT exist, create it from scratch!
+            gradle = gradle.replace(
+                /android\s*\{/, 
+                'android {\n' +
+                '    compileOptions {\n' +
+                '        coreLibraryDesugaringEnabled = true\n' +
+                '    }\n'
+            );
         }
+        // ----------------------------------------
+
         fs.writeFileSync(gradlePath, gradle);
         console.log("    + Android: Enabled desugaring in build.gradle");
     } catch (e) { 
         console.error("    - Android: Failed to enable desugaring.", e); 
     }
 }
+
 
 // Inject Android Permissions
 if (fs.existsSync(manifestPath)) {
