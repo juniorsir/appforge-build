@@ -9,8 +9,6 @@ const appVersion = process.env.APP_VERSION || '1.0.0';
 const appName = process.env.APP_NAME || 'AppForge App';
 const packageId = process.env.PACKAGE_ID || 'com.appforge.app';
 const baseDir = process.env.PROJECT_DIR ? path.resolve(process.env.PROJECT_DIR) : process.cwd();
-
-// Build Number Calculation (e.g., "1.0.5" -> 10005)
 const buildNumber = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
 
 console.log(`-> Target Directory: ${baseDir}`);
@@ -25,6 +23,10 @@ const plistPath = fs.existsSync(path.join(baseDir, 'ios', 'Runner', 'Info.plist'
     : path.join(baseDir, 'ios', 'App', 'App', 'Info.plist');
 const packageJsonPath = path.join(baseDir, 'package.json');
 const pubspecYamlPath = path.join(baseDir, 'pubspec.yaml');
+const propertiesPath = path.join(baseDir, 'android', 'gradle.properties');
+
+// Determine which gradle file exists, ONCE.
+let targetGradlePath = fs.existsSync(gradleAppPathKts) ? gradleAppPathKts : (fs.existsSync(gradleAppPathGroovy) ? gradleAppPathGroovy : null);
 
 // =================================================================
 // 1. UNIVERSAL METADATA INJECTION (Name, ID, Version)
@@ -44,16 +46,12 @@ if (fs.existsSync(pubspecYamlPath)) {
     } catch(e) { console.error("    - Failed to update pubspec version.", e); }
 }
 
-// B. Force Package ID and App Name into build.gradle
-let targetGradlePath = fs.existsSync(gradleAppPathKts) ? gradleAppPathKts : (fs.existsSync(gradleAppPathGroovy) ? gradleAppPathGroovy : null);
-
+// B. Inject into build.gradle (Package ID)
 if (targetGradlePath) {
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
-        // Force the Package ID
         gradle = gradle.replace(/applicationId\s*=?\s*["'][^"']+["']/g, `applicationId = "${packageId}"`);
         gradle = gradle.replace(/applicationId\s+["'][^"']+["']/g, `applicationId "${packageId}"`);
-        // Force the Namespace to match
         gradle = gradle.replace(/namespace\s*=?\s*["'][^"']+["']/g, `namespace = "${packageId}"`);
         gradle = gradle.replace(/namespace\s+["'][^"']+["']/g, `namespace "${packageId}"`);
         fs.writeFileSync(targetGradlePath, gradle);
@@ -96,7 +94,6 @@ else if (fs.existsSync(pubspecYamlPath)) {
 // =================================================================
 // 3. ENABLE ANDROID 13+ PERMISSIONS (permission_handler)
 // =================================================================
-const propertiesPath = path.join(baseDir, 'android', 'gradle.properties');
 if (fs.existsSync(propertiesPath) && Object.keys(deps).includes('permission_handler')) {
     try {
         let props = fs.readFileSync(propertiesPath, 'utf8');
@@ -109,7 +106,7 @@ if (fs.existsSync(propertiesPath) && Object.keys(deps).includes('permission_hand
 }
 
 // =================================================================
-// 4. DESUGARING INJECTION
+// 4. DESUGARING & PERMISSION INJECTION
 // =================================================================
 console.log("-> Analyzing installed plugins for required native features...");
 const permsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'permissions.json'), 'utf8'));
@@ -135,19 +132,14 @@ if (needsDesugaring && targetGradlePath) {
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
-
         if (isKts) {
-            if (gradle.includes('compileOptions {')) {
-                if (!gradle.includes('isCoreLibraryDesugaringEnabled = true')) gradle = gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true');
-            } else {
-                gradle = gradle.replace(/android\s*\{/, 'android {\n    compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n    }\n');
+            if (!gradle.includes('isCoreLibraryDesugaringEnabled = true')) {
+                gradle = gradle.includes('compileOptions {') ? gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true') : gradle.replace(/android\s*\{/, 'android {\n    compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n    }\n');
             }
             if (!gradle.includes('coreLibraryDesugaring(')) gradle += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")\n}\n';
         } else {
-            if (gradle.includes('compileOptions {')) {
-                if (!gradle.includes('coreLibraryDesugaringEnabled = true')) gradle = gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        coreLibraryDesugaringEnabled = true');
-            } else {
-                gradle = gradle.replace(/android\s*\{/, 'android {\n    compileOptions {\n        coreLibraryDesugaringEnabled = true\n    }\n');
+            if (!gradle.includes('coreLibraryDesugaringEnabled = true')) {
+                gradle = gradle.includes('compileOptions {') ? gradle.replace(/compileOptions\s*\{/, 'compileOptions {\n        coreLibraryDesugaringEnabled = true') : gradle.replace(/android\s*\{/, 'android {\n    compileOptions {\n        coreLibraryDesugaringEnabled = true\n    }\n');
             }
             if (!gradle.includes('coreLibraryDesugaring "')) gradle += '\n\ndependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"\n}\n';
         }
@@ -159,33 +151,27 @@ if (needsDesugaring && targetGradlePath) {
 // =================================================================
 // 5. NUCLEAR PERMISSION & MANIFEST INJECTION
 // =================================================================
-// B. Force App Name into AndroidManifest.xml (Crucial for Flutter)
 if (fs.existsSync(manifestPath)) {
     try {
         let manifest = fs.readFileSync(manifestPath, 'utf8');
-        // Ensure tools namespace
-        if (!manifest.includes('xmlns:tools=')) {
-            manifest = manifest.replace('<manifest', '<manifest xmlns:tools="http://schemas.android.com/tools"');
+        if (!manifest.includes('xmlns:tools=')) manifest = manifest.replace('<manifest', '<manifest xmlns:tools="http://schemas.android.com/tools"');
+        if (manifest.includes('package=')) {
+            manifest = manifest.replace(/package="[^"]+"/g, `package="${packageId}"`);
+        } else {
+            manifest = manifest.replace('<manifest', `<manifest package="${packageId}"`);
         }
-        // Force the App Name
         manifest = manifest.replace(/android:label="[^"]+"/g, `android:label="${appName}"`);
         manifest = manifest.replace(/<application/g, '<application tools:replace="android:label"');
+        for (const p of androidPerms) {
+            const permRegex = new RegExp(`<uses-permission android:name="${p}"[^>]*>`, 'g');
+            manifest = manifest.replace(permRegex, '');
+            manifest = manifest.replace('</manifest>', `    <uses-permission android:name="${p}" tools:node="replace" />\n</manifest>`);
+        }
         fs.writeFileSync(manifestPath, manifest);
-        console.log(`    + Android: Forced App Name to "${appName}"`);
-    } catch(e) {}
+        console.log(`    + Android: Successfully forced App Name & Permissions.`);
+    } catch(e) { console.error("    - Android: Failed to inject nuclear manifest.", e); }
 }
 
-// C. Inject into build.gradle (Just as a fallback, Flutter create should handle this)
-let targetGradlePath = fs.existsSync(gradleAppPathKts) ? gradleAppPathKts : (fs.existsSync(gradleAppPathGroovy) ? gradleAppPathGroovy : null);
-
-if (targetGradlePath) {
-    try {
-        let gradle = fs.readFileSync(targetGradlePath, 'utf8');
-        // This is now just a safety check.
-        gradle = gradle.replace(/applicationId\s*=?\s*["'][^"']+["']/g, `applicationId = "${packageId}"`);
-        fs.writeFileSync(targetGradlePath, gradle);
-    } catch(e) {}
-}
 // Inject iOS Permissions
 if (fs.existsSync(plistPath)) {
     for (const [key, desc] of Object.entries(iosPerms)) {
