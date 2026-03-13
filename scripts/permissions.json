@@ -305,8 +305,27 @@
   },
   "--- FLUTTER PACKAGES ---": {},
   "image_picker": {
-    "android": ["android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES"],
-    "ios": {"NSCameraUsageDescription": "This app needs camera access to take photos.", "NSPhotoLibraryUsageDescription": "This app needs access to your photos."}
+    "android": [
+      "android.permission.CAMERA", 
+      "android.permission.READ_EXTERNAL_STORAGE", 
+      "android.permission.WRITE_EXTERNAL_STORAGE", 
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_VISUAL_USER_ROLE"
+    ],
+    "ios": {
+      "NSCameraUsageDescription": "This app needs camera access to take photos.", 
+      "NSPhotoLibraryUsageDescription": "This app needs access to your photos."
+    }
+  },
+  "sensors_plus": {
+    "android": [
+      "android.permission.BODY_SENSORS", 
+      "android.permission.ACTIVITY_RECOGNITION"
+    ],
+    "ios": {
+      "NSMotionUsageDescription": "This app requires motion tracking."
+    }
   },
   "camera": {
     "android": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
