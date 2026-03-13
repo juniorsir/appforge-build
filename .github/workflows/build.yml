@@ -134,7 +134,7 @@ jobs:
           path: app_workspace/ios-project.zip
 
   # ==========================================
-  # 2. FLUTTER BUILDER (FINAL VERSION)
+  # 2. FLUTTER BUILDER (FINAL CLEANED VERSION)
   # ==========================================
   build-flutter:
     if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
@@ -167,24 +167,18 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      # --- CORRECTED ORDER & FIX ---
-      # 1. Force Regeneration to fix 'app_plugin_loader' error
       - name: Force Regenerate Native Folders
         run: |
           cd ${{ env.PROJECT_DIR }}
-          # Delete the old, broken native shell entirely
           rm -rf android/
-          # Force Flutter to generate a brand new, modern shell
           flutter create --platforms=android .
 
-      # 2. Install dependencies. This downloads all third-party plugins.
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
-      - name: Fix Broken Plugins (Namespaces & Kotlin)
+      - name: Fix Broken Plugin Namespaces & Kotlin
         run: |
           find app_workspace -name "build.gradle" -type f | while read file; do
-            # 1. Fix missing namespaces
             if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
               manifest=$(dirname "$file")/src/main/AndroidManifest.xml
               if [ -f "$manifest" ]; then
@@ -192,47 +186,26 @@ jobs:
                 sed -i "/android {/a \    namespace '${package_name}'" "$file"
               fi
             fi
-            
-            # 2. Prevent Kotlin warnings
             if grep -q "kotlin" "$file"; then
               echo "" >> "$file" 
               echo "tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { suppressWarnings = true; allWarningsAsErrors = false } }" >> "$file"
             fi
           done
-          
-          # --- THE ULTIMATE KOTLIN SOURCE PATCH ---
-          echo "Patching broken Kotlin source code in outdated plugins..."
-          # This finds all .kt files in the pub-cache and replaces .toLowerCase(locale) with .lowercase()
           find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toLowerCase(/.lowercase(/g' {} +
           find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toUpperCase(/.uppercase(/g' {} +
-          # ----------------------------------------
       
-      # 4. Inject permissions AND version into the newly generated native files.
       - name: Auto-Inject App Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
-          APP_NAME: ${{ inputs.app_name }}         # <-- Make sure these are here
+          APP_NAME: ${{ inputs.app_name }}
           PACKAGE_ID: ${{ inputs.package_id }}
         run: node scripts/inject-permissions.js
       
-      - name: Patch Gradle to use AppForge Metadata
-        run: |
-          cd ${{ env.PROJECT_DIR }}/android/app
-          
-          # 1. Patch applicationId
-          sed -i 's/applicationId = .*/applicationId = localProperties.getProperty("flutter.applicationId")/' build.gradle.kts || true
-          sed -i 's/applicationId .*/applicationId localProperties.getProperty("flutter.applicationId")/' build.gradle || true
-          
-          # 2. Patch resValue for App Name (This forces the launcher icon name)
-          sed -i '/defaultConfig {/a \        resValue("string", "app_name", localProperties.getProperty("flutter.appName"))' build.gradle.kts || true
-          sed -i '/defaultConfig {/a \        resValue "string", "app_name", localProperties.getProperty("flutter.appName")' build.gradle || true
-      
+      # *** THE ONLY BUILD STEP SHOULD BE THIS ONE ***
       - name: Build Flutter APK
         run: |
           cd ${{ env.PROJECT_DIR }}
-          echo "Cleaning old C++ and Gradle caches..."
-          flutter clean
           
           # Force the App Version via CLI
           BUILD_NAME="${{ inputs.app_version }}"
@@ -242,7 +215,7 @@ jobs:
           
           # Pass the build-name and build-number directly to the compiler!
           flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
-          
+        
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
