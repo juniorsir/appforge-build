@@ -23,30 +23,38 @@ const pubspecYamlPath = path.join(baseDir, 'pubspec.yaml');
 // 1. VERSION INJECTION
 // =================================================================
 console.log(`-> Injecting app version: ${appVersion}`);
-if (fs.existsSync(gradlePath)) {
+
+// =================================================================
+// 1. UNIVERSAL METADATA INJECTION (Name, ID, Version)
+// =================================================================
+
+// A. Inject into pubspec.yaml (Bulletproof Regex)
+if (fs.existsSync(pubspecYamlPath)) {
     try {
-        let gradle = fs.readFileSync(gradlePath, 'utf8');
-        gradle = gradle.replace(/versionName\s+['"].*['"]/, `versionName "${appVersion}"`);
-        const versionCode = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
-        gradle = gradle.replace(/versionCode\s+\d+/, `versionCode ${versionCode}`);
-        fs.writeFileSync(gradlePath, gradle);
-        console.log(`    + Android: Set version to ${appVersion} (Code: ${versionCode})`);
-    } catch(e) {
-        console.error('    - Android: Failed to inject version number.', e);
-    }
+        let pubspec = fs.readFileSync(pubspecYamlPath, 'utf8');
+        // This regex ensures we only replace the root version line, not a dependency version
+        if (pubspec.match(/^version:/m)) {
+            pubspec = pubspec.replace(/^version:\s*.*$/m, `version: ${appVersion}+${buildNumber}`);
+        } else {
+            pubspec = pubspec.replace(/^description:\s*.*$/m, `$& \nversion: ${appVersion}+${buildNumber}`);
+        }
+        fs.writeFileSync(pubspecYamlPath, pubspec);
+        console.log(`    + Flutter: Updated pubspec.yaml version to ${appVersion}+${buildNumber}`);
+    } catch(e) { console.error("    - Failed to update pubspec version."); }
 }
 
-if (fs.existsSync(plistPath)) {
+// B. Force Package ID into AndroidManifest.xml (Crucial for Flutter)
+if (fs.existsSync(manifestPath)) {
     try {
-        execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${appVersion}" "${plistPath}"`);
-        const buildNumber = parseInt(appVersion.split('.').map(v => v.padStart(2, '0')).join('').slice(0, 8)) || 1;
-        execSync(`/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumber}" "${plistPath}"`);
-        console.log(`    + iOS: Set version to ${appVersion} (Build: ${buildNumber})`);
-    } catch (e) {
-        console.error("    - iOS: Failed to inject version number.", e);
-    }
+        let manifest = fs.readFileSync(manifestPath, 'utf8');
+        if (manifest.includes('package=')) {
+            manifest = manifest.replace(/package="[^"]+"/g, `package="${packageId}"`);
+            fs.writeFileSync(manifestPath, manifest);
+            console.log(`    + Android: Set Manifest Package ID to "${packageId}"`);
+        }
+    } catch(e) {}
 }
-
+ 
 // =================================================================
 // 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
