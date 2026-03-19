@@ -396,6 +396,42 @@
     "android": ["android.permission.ACTIVITY_RECOGNITION"],
     "ios": {"NSMotionUsageDescription": "This app needs to access your motion sensors to count your steps."}
   },
+  "http": {
+    "android": [
+      "android.permission.INTERNET"
+    ],
+    "ios": {}
+  },
+  "path_provider": {
+    "android": [
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.MANAGE_EXTERNAL_STORAGE",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_AUDIO"
+    ],
+    "ios": {
+      "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for downloads.",
+      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save files to your photo library."
+    }
+  },
+  # We are mapping our custom 'yt_dlp_service.dart' detection to provide powerful storage permissions.
+  # This makes the AI inject the most comprehensive storage access.
+  "yt_dlp_service.dart": { 
+    "android": [
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.MANAGE_EXTERNAL_STORAGE",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_AUDIO"
+    ],
+    "ios": {
+      "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for downloads and uploads.",
+      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save files to your photo library."
+    }
+  },
   "flutter_sound": {
     "android": ["android.permission.RECORD_AUDIO", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"],
     "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
