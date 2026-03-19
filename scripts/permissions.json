@@ -396,41 +396,30 @@
     "android": ["android.permission.ACTIVITY_RECOGNITION"],
     "ios": {"NSMotionUsageDescription": "This app needs to access your motion sensors to count your steps."}
   },
-  "http": {
-    "android": [
-      "android.permission.INTERNET"
-    ],
-    "ios": {}
-  },
+  "--- FLUTTER PACKAGES ---": {},
   "path_provider": {
     "android": [
       "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE",
-      "android.permission.MANAGE_EXTERNAL_STORAGE",
-      "android.permission.READ_MEDIA_IMAGES",
-      "android.permission.READ_MEDIA_VIDEO",
-      "android.permission.READ_MEDIA_AUDIO"
+      "android.permission.WRITE_EXTERNAL_STORAGE"
     ],
-    "ios": {
-      "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for downloads.",
-      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save files to your photo library."
-    }
+    "ios": {}
   },
-  # We are mapping our custom 'yt_dlp_service.dart' detection to provide powerful storage permissions.
-  # This makes the AI inject the most comprehensive storage access.
-  "yt_dlp_service.dart": { 
+  "permission_handler": {
     "android": [
-      "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.INTERNET",
       "android.permission.MANAGE_EXTERNAL_STORAGE",
-      "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
-      "android.permission.READ_MEDIA_AUDIO"
+      "android.permission.READ_MEDIA_AUDIO",
+      "android.permission.READ_MEDIA_IMAGES"
     ],
-    "ios": {
-      "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for downloads and uploads.",
-      "NSPhotoLibraryAddUsageDescription": "This app needs permission to save files to your photo library."
-    }
+    "ios": {}
+  },
+  "http": {
+    "android": [
+      "android.permission.INTERNET",
+      "android.permission.ACCESS_NETWORK_STATE"
+    ],
+    "ios": {}
   },
   "flutter_sound": {
     "android": ["android.permission.RECORD_AUDIO", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"],
