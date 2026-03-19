@@ -421,6 +421,15 @@
     ],
     "ios": {}
   },
+  "permission_handler": {
+  "android": [
+    "android.permission.INTERNET",
+    "android.permission.MANAGE_EXTERNAL_STORAGE",
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE"
+  ],
+  "ios": {}
+  },
   "flutter_sound": {
     "android": ["android.permission.RECORD_AUDIO", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"],
     "ios": {"NSMicrophoneUsageDescription": "This app needs microphone access to record audio."}
