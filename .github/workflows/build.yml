@@ -31,6 +31,16 @@ on:
         required: false
         type: string
         default: '.'
+      app_name:
+        description: 'The display name of the app'
+        required: false
+        type: string
+        default: 'AppForge App'
+      package_id:
+        description: 'The unique bundle identifier'
+        required: false
+        type: string
+        default: 'com.appforge.app'
 
 jobs:
   # ==========================================
