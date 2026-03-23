@@ -266,15 +266,15 @@ if (process.platform === 'darwin') {
     console.log(`\n-> Stage 6: Skipping iOS Injection (Running on ${process.platform}, not macOS).`);
 }
 
-// --- In inject-permissions.js, at the bottom ---
-
 // =================================================================
 // 6. APP SIGNING INJECTION
 // =================================================================
 const keystorePropsPath = path.join(baseDir, 'android', 'app', 'keystore.properties');
+// Read the build type from GitHub Actions
+const buildType = process.env.BUILD_TYPE || 'debug';
 
 if (targetGradlePath && fs.existsSync(keystorePropsPath)) {
-    console.log(`\n-> Stage 6: Injecting Permanent App Signature`);
+    console.log(`\n-> Stage 6: Injecting Permanent App Signature (${buildType})`);
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
@@ -300,15 +300,16 @@ android {
         }
     }
 `;
-                // Inject the block right before the existing 'android {' block
                 gradle = gradle.replace('android {', ktsSigningBlock);
             }
             
-            // Force debug builds to use the release signature
-            if (gradle.includes('signingConfig = signingConfigs.getByName("debug")')) {
-                 gradle = gradle.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")');
-            } else if (gradle.includes('buildTypes {')) {
-                 gradle = gradle.replace('buildTypes {', 'buildTypes {\n        debug {\n            signingConfig = signingConfigs.getByName("release")\n        }');
+            // Apply signature based on user choice
+            if (buildType === 'release') {
+                if (gradle.includes('signingConfig = signingConfigs.getByName("debug")')) {
+                     gradle = gradle.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")');
+                } else if (gradle.includes('buildTypes {')) {
+                     gradle = gradle.replace('buildTypes {', 'buildTypes {\n        release {\n            signingConfig = signingConfigs.getByName("release")\n        }');
+                }
             }
 
         } else {
@@ -335,16 +336,18 @@ android {
                 gradle = gradle.replace('android {', groovySigningBlock);
             }
             
-            // Force debug builds to use the release signature
-            if (gradle.includes('signingConfig signingConfigs.debug')) {
-                 gradle = gradle.replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release');
-            } else if (gradle.includes('buildTypes {')) {
-                 gradle = gradle.replace('buildTypes {', 'buildTypes {\n        debug {\n            signingConfig signingConfigs.release\n        }');
+            // Apply signature based on user choice
+            if (buildType === 'release') {
+                if (gradle.includes('signingConfig signingConfigs.debug')) {
+                     gradle = gradle.replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release');
+                } else if (gradle.includes('buildTypes {')) {
+                     gradle = gradle.replace('buildTypes {', 'buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }');
+                }
             }
         }
 
         fs.writeFileSync(targetGradlePath, gradle);
-        console.log(`    + Android: Successfully injected production signing keys.`);
+        console.log(`    + Android: Successfully injected production signing keys for ${buildType}.`);
     } catch(e) {
         console.error(`    - Android: Failed to inject signing config.`, e);
     }
