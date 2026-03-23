@@ -247,13 +247,17 @@ jobs:
       # -------------------------------------------
       
       # --- FIXED: NODE.JS RUNS AFTER KEYSTORE EXISTS ---
-      - name: Auto-Inject App Permissions & Version
+      - name: Auto-Inject App Permissions & Metadata
         env:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
           APP_NAME: ${{ inputs.app_name }}
           PACKAGE_ID: ${{ inputs.package_id }}
-          BUILD_TYPE: ${{ inputs.build_type }} # <-- Don't forget this!
+          BUILD_TYPE: ${{ inputs.build_type }}
+          # --- ADD THESE FOUR NEW ENV VARS ---
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
         run: node scripts/inject-permissions.js
       # -------------------------------------------------
 
