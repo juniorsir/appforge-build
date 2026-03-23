@@ -69,14 +69,14 @@ if (verificationFailed) {
 } else {
     console.log("✅ Local Metadata Verified successfully.");
 }
+
 // =================================================================
 // 1.5 CLOUD ICON INJECTION
 // =================================================================
 console.log(`\n-> Stage 1.5: Injecting Custom App Icon`);
 
-// The Local CLI names the uploaded icon 'appforge_icon.png' and places it at the root
-// of the unzipped app_workspace.
-const iconSource = path.join(process.cwd(), 'appforge_icon.png');
+// Look for the icon at the root of the unzipped directory (baseDir)
+const iconSource = path.join(baseDir, 'appforge_icon.png');
 
 if (fs.existsSync(iconSource) && fs.existsSync(manifestPath)) {
     console.log("    - Found custom icon: appforge_icon.png");
@@ -111,6 +111,7 @@ if (fs.existsSync(iconSource) && fs.existsSync(manifestPath)) {
 } else {
     console.log("    - No custom icon found (appforge_icon.png). Using default.");
 }
+
 // =================================================================
 // 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
