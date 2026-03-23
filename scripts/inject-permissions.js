@@ -267,7 +267,7 @@ if (process.platform === 'darwin') {
 }
 
 // =================================================================
-// 6. UNIVERSAL APP SIGNING (AGGRESSIVE OVERRIDE)
+// 6. UNIVERSAL APP SIGNING (FORCE APPEND OVERRIDE)
 // =================================================================
 const buildType = process.env.BUILD_TYPE || 'debug';
 const ksPass = process.env.KS_PASS;
@@ -275,67 +275,73 @@ const ksAlias = process.env.KS_ALIAS;
 const kPass = process.env.K_PASS;
 
 if (targetGradlePath && ksPass && ksAlias && kPass) {
-    console.log(`\n-> Stage 6: Forcing Permanent App Signature (${buildType})`);
+    console.log(`\n-> Stage 6: Force-Injecting Permanent App Signature (${buildType})`);
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
 
-        // 1. Prepare the Signing Block
-        const signingBlock = isKts ? `
+        // We append a BRAND NEW android block to the end of the file. 
+        // Gradle will merge this and our values will overwrite any previous ones.
+        let forceSignBlock = "";
+
+        if (isKts) {
+            forceSignBlock = `
+// --- FORCE-INJECTED BY APPFORGE ---
+android {
     signingConfigs {
-        create("release") {
+        create("appforgeSign") {
             storeFile = file("appforge.keystore")
             storePassword = "${ksPass}"
             keyAlias = "${ksAlias}"
             keyPassword = "${kPass}"
         }
     }
-` : `
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("appforgeSign")
+        }
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("appforgeSign")
+        }
+    }
+}
+`;
+        } else {
+            forceSignBlock = `
+// --- FORCE-INJECTED BY APPFORGE ---
+android {
     signingConfigs {
-        release {
+        appforgeSign {
             storeFile file("appforge.keystore")
             storePassword "${ksPass}"
             keyAlias "${ksAlias}"
             keyPassword "${kPass}"
         }
     }
-`;
-
-        // 2. Inject signingConfigs right after 'android {'
-        if (!gradle.includes('signingConfigs {')) {
-            gradle = gradle.replace(/android\s*\{/, `android {\n${signingBlock}`);
+    buildTypes {
+        release {
+            signingConfig signingConfigs.appforgeSign
         }
-
-        // 3. FORCE the build types to use the release config
-        if (isKts) {
-            // Find 'getByName("release") {' and ensure 'signingConfig' is set inside it
-            // We use a regex that handles comments and spacing
-            gradle = gradle.replace(
-                /getByName\("release"\)\s*\{[\s\S]*?\}/, 
-                `getByName("release") {\n        signingConfig = signingConfigs.getByName("release")\n    }`
-            );
-            // Also force debug to use release key so we can test updates easily
-            gradle = gradle.replace(
-                /getByName\("debug"\)\s*\{[\s\S]*?\}/, 
-                `getByName("debug") {\n        signingConfig = signingConfigs.getByName("release")\n    }`
-            );
-        } else {
-            // Groovy version
-            gradle = gradle.replace(
-                /release\s*\{[\s\S]*?\}/, 
-                `release {\n            signingConfig signingConfigs.release\n        }`
-            );
-            gradle = gradle.replace(
-                /debug\s*\{[\s\S]*?\}/, 
-                `debug {\n            signingConfig signingConfigs.release\n        }`
-            );
+        debug {
+            signingConfig signingConfigs.appforgeSign
         }
-
-        fs.writeFileSync(targetGradlePath, gradle);
-        console.log(`    + Android: Signature logic forcefully injected.`);
-    } catch(e) {
-        console.error(`    - Android: Failed to inject signing config.`, e);
     }
 }
+`;
+        }
+
+        // Clean up any old AppForge injections first to prevent duplicates
+        gradle = gradle.split("// --- FORCE-INJECTED BY APPFORGE ---")[0];
+        
+        // Append the block to the very bottom
+        fs.writeFileSync(targetGradlePath, gradle + forceSignBlock);
+        
+        console.log(`    + Android: Permanent signature forced at end of ${path.basename(targetGradlePath)}`);
+    } catch(e) {
+        console.error(`    - Android: Failed to force signing config.`, e);
+    }
+}
+
+console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
         
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
