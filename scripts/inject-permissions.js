@@ -265,12 +265,10 @@ if (process.platform === 'darwin') {
 } else {
     console.log(`\n-> Stage 6: Skipping iOS Injection (Running on ${process.platform}, not macOS).`);
 }
-
 // =================================================================
 // 6. APP SIGNING INJECTION
 // =================================================================
 const keystorePropsPath = path.join(baseDir, 'android', 'app', 'keystore.properties');
-// Read the build type from GitHub Actions
 const buildType = process.env.BUILD_TYPE || 'debug';
 
 if (targetGradlePath && fs.existsSync(keystorePropsPath)) {
@@ -280,23 +278,28 @@ if (targetGradlePath && fs.existsSync(keystorePropsPath)) {
         const isKts = targetGradlePath.endsWith('.kts');
 
         if (isKts) {
-            // --- KOTLIN SCRIPT (.kts) INJECTION ---
+            // --- PERFECT KOTLIN SCRIPT (.kts) INJECTION ---
             if (!gradle.includes('signingConfigs {')) {
+                // Notice: We import the Java classes at the very top of the block
+                // and use properties.getProperty() instead of bracket notation.
                 const ktsSigningBlock = `
 // --- INJECTED BY APPFORGE FOR PERMANENT SIGNING ---
+import java.util.Properties
+import java.io.FileInputStream
+
 val keystorePropertiesFile = rootProject.file("app/keystore.properties")
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 if (keystorePropertiesFile.canRead()) {
-    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = file(keystoreProperties.getProperty("storeFile"))
+            storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
 `;
@@ -352,5 +355,5 @@ android {
         console.error(`    - Android: Failed to inject signing config.`, e);
     }
 }
-
+        
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
