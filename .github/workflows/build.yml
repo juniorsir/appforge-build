@@ -267,10 +267,12 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
       
-      # *** THE ONLY BUILD STEP SHOULD BE THIS ONE ***
+      # --- UPDATE THIS STEP IN YOUR FLUTTER JOB ---
       - name: Build Flutter APK
         run: |
           cd ${{ env.PROJECT_DIR }}
+          echo "Cleaning old C++ and Gradle caches..."
+          flutter clean
           
           # Force the App Version via CLI
           BUILD_NAME="${{ inputs.app_version }}"
@@ -278,14 +280,13 @@ jobs:
           
           echo "Building ${{ inputs.build_type }} APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
           
-          # Pass the dynamic --debug or --release flag!
-          flutter build apk --${{ inputs.build_type }} --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
-        
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
+          # Pass the dynamic build_type flag!
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            flutter build apk --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+          else
+            flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+          fi
+      # --------------------------------------------
   # ==========================================
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
   # === =====================================
