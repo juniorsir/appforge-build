@@ -265,92 +265,64 @@ if (process.platform === 'darwin') {
 } else {
     console.log(`\n-> Stage 6: Skipping iOS Injection (Running on ${process.platform}, not macOS).`);
 }
-// =================================================================
-// 6. APP SIGNING INJECTION
-// =================================================================
-const keystorePropsPath = path.join(baseDir, 'android', 'app', 'keystore.properties');
-const buildType = process.env.BUILD_TYPE || 'debug';
 
-if (targetGradlePath && fs.existsSync(keystorePropsPath)) {
+// =================================================================
+// 6. APP SIGNING INJECTION (FOOLPROOF DIRECT VERSION)
+// =================================================================
+const buildType = process.env.BUILD_TYPE || 'debug';
+const ksPass = process.env.KS_PASS;
+const ksAlias = process.env.KS_ALIAS;
+const kPass = process.env.K_PASS;
+
+// Only attempt signing if we have the secrets and the gradle file
+if (targetGradlePath && ksPass && ksAlias && kPass) {
     console.log(`\n-> Stage 6: Injecting Permanent App Signature (${buildType})`);
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
 
+        // We write the actual secrets into the Gradle file. 
+        // GitHub will still mask them as *** in the logs.
         if (isKts) {
-            // --- PERFECT KOTLIN SCRIPT (.kts) INJECTION ---
-            if (!gradle.includes('signingConfigs {')) {
-                // Notice: We import the Java classes at the very top of the block
-                // and use properties.getProperty() instead of bracket notation.
-                const ktsSigningBlock = `
-// --- INJECTED BY APPFORGE FOR PERMANENT SIGNING ---
-import java.util.Properties
-import java.io.FileInputStream
-
-val keystorePropertiesFile = rootProject.file("app/keystore.properties")
-val keystoreProperties = Properties()
-if (keystorePropertiesFile.canRead()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
+            const ktsSigningBlock = `
 android {
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = file(keystoreProperties.getProperty("storeFile"))
-            storePassword = keystoreProperties.getProperty("storePassword")
+            storeFile = file("appforge.keystore")
+            storePassword = "${ksPass}"
+            keyAlias = "${ksAlias}"
+            keyPassword = "${kPass}"
         }
     }
 `;
+            if (!gradle.includes('signingConfigs {')) {
                 gradle = gradle.replace('android {', ktsSigningBlock);
             }
-            
-            // Apply signature based on user choice
             if (buildType === 'release') {
-                if (gradle.includes('signingConfig = signingConfigs.getByName("debug")')) {
-                     gradle = gradle.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")');
-                } else if (gradle.includes('buildTypes {')) {
-                     gradle = gradle.replace('buildTypes {', 'buildTypes {\n        release {\n            signingConfig = signingConfigs.getByName("release")\n        }');
-                }
+                gradle = gradle.replace(/buildTypes\s*\{/, 'buildTypes {\n        release {\n            signingConfig = signingConfigs.getByName("release")\n        }');
             }
-
         } else {
-            // --- GROOVY SCRIPT (.gradle) INJECTION ---
-            if (!gradle.includes('signingConfigs {')) {
-                const groovySigningBlock = `
-// --- INJECTED BY APPFORGE FOR PERMANENT SIGNING ---
-def keystorePropertiesFile = rootProject.file("app/keystore.properties")
-def keystoreProperties = new Properties()
-if (keystorePropertiesFile.canRead()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
+            const groovySigningBlock = `
 android {
     signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
+            storeFile file("appforge.keystore")
+            storePassword "${ksPass}"
+            keyAlias "${ksAlias}"
+            keyPassword "${kPass}"
         }
     }
 `;
+            if (!gradle.includes('signingConfigs {')) {
                 gradle = gradle.replace('android {', groovySigningBlock);
             }
-            
-            // Apply signature based on user choice
             if (buildType === 'release') {
-                if (gradle.includes('signingConfig signingConfigs.debug')) {
-                     gradle = gradle.replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release');
-                } else if (gradle.includes('buildTypes {')) {
-                     gradle = gradle.replace('buildTypes {', 'buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }');
-                }
+                gradle = gradle.replace(/buildTypes\s*\{/, 'buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }');
             }
         }
 
         fs.writeFileSync(targetGradlePath, gradle);
-        console.log(`    + Android: Successfully injected production signing keys for ${buildType}.`);
+        console.log(`    + Android: Successfully injected production signing keys.`);
     } catch(e) {
         console.error(`    - Android: Failed to inject signing config.`, e);
     }
