@@ -266,4 +266,88 @@ if (process.platform === 'darwin') {
     console.log(`\n-> Stage 6: Skipping iOS Injection (Running on ${process.platform}, not macOS).`);
 }
 
+// --- In inject-permissions.js, at the bottom ---
+
+// =================================================================
+// 6. APP SIGNING INJECTION
+// =================================================================
+const keystorePropsPath = path.join(baseDir, 'android', 'app', 'keystore.properties');
+
+if (targetGradlePath && fs.existsSync(keystorePropsPath)) {
+    console.log(`\n-> Stage 6: Injecting Permanent App Signature`);
+    try {
+        let gradle = fs.readFileSync(targetGradlePath, 'utf8');
+        const isKts = targetGradlePath.endsWith('.kts');
+
+        if (isKts) {
+            // --- KOTLIN SCRIPT (.kts) INJECTION ---
+            if (!gradle.includes('signingConfigs {')) {
+                const ktsSigningBlock = `
+// --- INJECTED BY APPFORGE FOR PERMANENT SIGNING ---
+val keystorePropertiesFile = rootProject.file("app/keystore.properties")
+val keystoreProperties = java.util.Properties()
+if (keystorePropertiesFile.canRead()) {
+    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+`;
+                // Inject the block right before the existing 'android {' block
+                gradle = gradle.replace('android {', ktsSigningBlock);
+            }
+            
+            // Force debug builds to use the release signature
+            if (gradle.includes('signingConfig = signingConfigs.getByName("debug")')) {
+                 gradle = gradle.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")');
+            } else if (gradle.includes('buildTypes {')) {
+                 gradle = gradle.replace('buildTypes {', 'buildTypes {\n        debug {\n            signingConfig = signingConfigs.getByName("release")\n        }');
+            }
+
+        } else {
+            // --- GROOVY SCRIPT (.gradle) INJECTION ---
+            if (!gradle.includes('signingConfigs {')) {
+                const groovySigningBlock = `
+// --- INJECTED BY APPFORGE FOR PERMANENT SIGNING ---
+def keystorePropertiesFile = rootProject.file("app/keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.canRead()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+`;
+                gradle = gradle.replace('android {', groovySigningBlock);
+            }
+            
+            // Force debug builds to use the release signature
+            if (gradle.includes('signingConfig signingConfigs.debug')) {
+                 gradle = gradle.replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release');
+            } else if (gradle.includes('buildTypes {')) {
+                 gradle = gradle.replace('buildTypes {', 'buildTypes {\n        debug {\n            signingConfig signingConfigs.release\n        }');
+            }
+        }
+
+        fs.writeFileSync(targetGradlePath, gradle);
+        console.log(`    + Android: Successfully injected production signing keys.`);
+    } catch(e) {
+        console.error(`    - Android: Failed to inject signing config.`, e);
+    }
+}
+
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
