@@ -75,7 +75,7 @@ jobs:
       - name: Set Project Directory
         run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
   
-      # --- NEW: APP SIGNING STEP ---
+      # --- IN build.yml ---
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -85,19 +85,11 @@ jobs:
           # 1. Decode the secret back into a real keystore file
           echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
           
-          # 2. Tell Gradle to use this keystore instead of a random debug one
-          echo "storeFile=appforge.keystore" >> keystore.properties
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-          
-          # 3. Patch build.gradle to read these properties
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("app/keystore.properties")\n            def keystoreProperties = new Properties()\n            if (keystorePropertiesFile.canRead()) {\n                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            }\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' build.gradle || true
-          
-          # Apply the signing config to the debug build type so it works instantly
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' build.gradle || true
-          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' build.gradle.kts || true
-      # -----------------------------
       
       - name: Build Web App
         run: cd app_workspace && npm run build --if-present
@@ -249,7 +241,8 @@ jobs:
           PACKAGE_ID: ${{ inputs.package_id }}
         run: node scripts/inject-permissions.js
 
-      # --- NEW: APP SIGNING STEP ---
+      
+      # --- IN build.yml ---
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -259,20 +252,11 @@ jobs:
           # 1. Decode the secret back into a real keystore file
           echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
           
-          # 2. Tell Gradle to use this keystore instead of a random debug one
-          echo "storeFile=appforge.keystore" >> keystore.properties
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-          
-          # 3. Patch build.gradle to read these properties
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("app/keystore.properties")\n            def keystoreProperties = new Properties()\n            if (keystorePropertiesFile.canRead()) {\n                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            }\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' build.gradle || true
-          
-          # Apply the signing config to the debug build type so it works instantly
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' build.gradle || true
-          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' build.gradle.kts || true
-      # -----------------------------
-      
       
       # *** THE ONLY BUILD STEP SHOULD BE THIS ONE ***
       - name: Build Flutter APK
@@ -295,7 +279,7 @@ jobs:
           path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-debug.apk
   # ==========================================
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
-  # ==========================================
+  # === =====================================
   build-native-android:
     if: inputs.project_category == 'native' && inputs.project_type == 'android_native'
     runs-on: ubuntu-latest
@@ -317,7 +301,7 @@ jobs:
       - name: Set Project Directory
         run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
   
-      # --- NEW: APP SIGNING STEP ---
+      # --- IN build.yml ---
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -327,19 +311,11 @@ jobs:
           # 1. Decode the secret back into a real keystore file
           echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
           
-          # 2. Tell Gradle to use this keystore instead of a random debug one
-          echo "storeFile=appforge.keystore" >> keystore.properties
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-          
-          # 3. Patch build.gradle to read these properties
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            def keystorePropertiesFile = rootProject.file("app/keystore.properties")\n            def keystoreProperties = new Properties()\n            if (keystorePropertiesFile.canRead()) {\n                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n            }\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n        }\n    }' build.gradle || true
-          
-          # Apply the signing config to the debug build type so it works instantly
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' build.gradle || true
-          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' build.gradle.kts || true
-      # -----------------------------
       
       - name: Build Native APK
         run: |
