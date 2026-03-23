@@ -172,7 +172,7 @@ jobs:
           path: app_workspace/ios-project.zip
 
   # ==========================================
-  # 2. FLUTTER BUILDER (FINAL CLEANED VERSION)
+  # 2. FLUTTER BUILDER (PERFECT ORDER)
   # ==========================================
   build-flutter:
     if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
@@ -205,22 +205,13 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      # --- THIS IS THE ULTIMATE FIX FOR FLUTTER METADATA ---
       - name: Force Regenerate Native Folders with Correct Metadata
         run: |
           cd ${{ env.PROJECT_DIR }}
-          
-          # 1. Extract the organization from the package ID
-          # e.g., "com.vaultos.app" -> "com.vaultos"
           ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
-          
-          echo "Deleting outdated Android shell..."
           rm -rf android/
-          
-          echo "Generating new Android shell for organization: $ORG_NAME"
-          # 2. Tell flutter create the package ID from the start!
           flutter create --org $ORG_NAME --platforms=android .
-      # ----------------------------------------------------
+
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
@@ -241,59 +232,54 @@ jobs:
           done
           find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toLowerCase(/.lowercase(/g' {} +
           find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toUpperCase(/.uppercase(/g' {} +
+
+      # --- FIXED: THIS MUST RUN BEFORE NODE.JS ---
+      - name: Setup Permanent App Signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          cd ${{ env.PROJECT_DIR }}/android/app
+          echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
+          echo "storeFile=appforge.keystore" > keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+      # -------------------------------------------
       
+      # --- FIXED: NODE.JS RUNS AFTER KEYSTORE EXISTS ---
       - name: Auto-Inject App Permissions & Version
         env:
           APP_VERSION: ${{ inputs.app_version }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }} 
           APP_NAME: ${{ inputs.app_name }}
           PACKAGE_ID: ${{ inputs.package_id }}
+          BUILD_TYPE: ${{ inputs.build_type }} # <-- Don't forget this!
         run: node scripts/inject-permissions.js
+      # -------------------------------------------------
 
-      
-      # --- IN build.yml ---
-      - name: Setup Permanent App Signature
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          cd ${{ env.PROJECT_DIR }}/android/app
-          
-          # 1. Decode the secret back into a real keystore file
-          echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
-          
-          # 2. Create the properties file for Node.js to read
-          echo "storeFile=appforge.keystore" > keystore.properties
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-    
-      # --- UPDATE THIS STEP IN YOUR FLUTTER JOB ---
       - name: Build Flutter APK
         run: |
           cd ${{ env.PROJECT_DIR }}
           echo "Cleaning old C++ and Gradle caches..."
           flutter clean
-          
-          # Force the App Version via CLI
           BUILD_NAME="${{ inputs.app_version }}"
           BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
+          echo "Building ${{ inputs.build_type }} APK..."
           
-          echo "Building ${{ inputs.build_type }} APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
-          
-          # Pass the dynamic build_type flag!
+          # Pass the dynamic --debug or --release flag!
           if [ "${{ inputs.build_type }}" == "release" ]; then
             flutter build apk --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
           else
             flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
           fi
-        # --- DOUBLE-CHECK THIS STEP ---
+        
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          # Flutter puts debug in app-debug.apk and release in app-release.apk
           path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
           
+            
       # --------------------------------------------
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
   # === =====================================
