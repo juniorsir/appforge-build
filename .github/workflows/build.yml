@@ -1,0 +1,352 @@
+name: AppForge Cloud Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_id:
+        description: 'Unique ID of the app to build'
+        required: true
+        type: string
+      platform:
+        description: 'android, ios, or both'
+        required: true
+        type: string
+      project_category:
+        description: 'web or native'
+        required: true
+        type: string
+        default: 'web'
+      project_type:
+        description: 'Framework type (react, flutter, etc)'
+        required: true
+        type: string
+        default: 'unknown'
+      app_version:
+        description: 'The semantic version of the app build'
+        required: false
+        type: string
+        default: '1.0.0'
+      sub_path:
+        description: 'The sub-directory of the project within the monorepo'
+        required: false
+        type: string
+        default: '.'
+      app_name:
+        description: 'The display name of the app'
+        required: false
+        type: string
+        default: 'AppForge App'
+      package_id:
+        description: 'The unique bundle identifier'
+        required: false
+        type: string
+        default: 'com.appforge.app'
+      build_type:
+        description: 'Build mode: debug or release'
+        required: false
+        type: string
+        default: 'debug'
+
+jobs:
+  # ==========================================
+  # 1. WEB APP BUILDER (Capacitor)
+  # ==========================================
+  build-android:
+    if: inputs.project_category == 'web' && (inputs.platform == 'android' || inputs.platform == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+
+      - name: Install JS Dependencies
+        run: cd app_workspace && npm install
+
+      - name: Set Project Directory
+        run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+  
+      # --- IN build.yml ---
+      - name: Setup Permanent App Signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          cd ${{ env.PROJECT_DIR }}/android/app
+          
+          # 1. Decode the secret back into a real keystore file
+          echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
+          
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+      
+      - name: Build Web App
+        run: cd app_workspace && npm run build --if-present
+          
+      - name: Add Android Platform
+        run: |
+          cd app_workspace
+          npm install @capacitor/android
+          npx cap add android
+
+      - name: Capacitor Sync
+        run: cd app_workspace && npx cap sync android
+
+      - name: Auto-Inject Native Permissions
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
+        run: node ../scripts/inject-permissions.js
+        working-directory: app_workspace
+
+      - name: Build APK
+        run: |
+          cd app_workspace/android
+          chmod +x ./gradlew
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-apk-${{ github.event.inputs.app_id }}
+          path: app_workspace/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-ios:
+    if: inputs.project_category == 'web' && (inputs.platform == 'ios' || inputs.platform == 'both')
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+
+      - name: Install JS Dependencies
+        run: cd app_workspace && npm install
+
+      - name: Build Web App
+        run: cd app_workspace && npm run build --if-present
+          
+      - name: Add iOS Platform
+        run: |
+          cd app_workspace
+          npm install @capacitor/ios
+          npx cap add ios
+
+      - name: Capacitor Sync
+        run: cd app_workspace && npx cap sync ios
+
+      - name: Zipping Xcode Project 
+        run: cd app_workspace && zip -r ios-project.zip ios/
+    
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-ios-${{ github.event.inputs.app_id }}
+          path: app_workspace/ios-project.zip
+
+  # ==========================================
+  # 2. FLUTTER BUILDER (FINAL CLEANED VERSION)
+  # ==========================================
+  build-flutter:
+    if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Cache Flutter Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: flutter-pub-${{ hashFiles('**/pubspec.lock') }}
+          
+      - name: Unzip Uploaded Source
+        run: unzip -o "apps/${{ inputs.app_id }}/source.zip" -d app_workspace
+
+      - name: Set Project Directory
+        id: set_project_dir
+        run: |
+          if [ "${{ inputs.sub_path }}" != "." ]; then
+            echo "PROJECT_DIR=app_workspace/${{ inputs.sub_path }}" >> $GITHUB_ENV
+          else
+            echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+          fi
+
+      # --- THIS IS THE ULTIMATE FIX FOR FLUTTER METADATA ---
+      - name: Force Regenerate Native Folders with Correct Metadata
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          
+          # 1. Extract the organization from the package ID
+          # e.g., "com.vaultos.app" -> "com.vaultos"
+          ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
+          
+          echo "Deleting outdated Android shell..."
+          rm -rf android/
+          
+          echo "Generating new Android shell for organization: $ORG_NAME"
+          # 2. Tell flutter create the package ID from the start!
+          flutter create --org $ORG_NAME --platforms=android .
+      # ----------------------------------------------------
+      - name: Install Dependencies
+        run: cd ${{ env.PROJECT_DIR }} && flutter pub get
+
+      - name: Fix Broken Plugin Namespaces & Kotlin
+        run: |
+          find app_workspace -name "build.gradle" -type f | while read file; do
+            if grep -q "com.android.library" "$file" && ! grep -q "namespace" "$file"; then
+              manifest=$(dirname "$file")/src/main/AndroidManifest.xml
+              if [ -f "$manifest" ]; then
+                package_name=$(grep -oP 'package="\K[^"]+' "$manifest" || echo "com.example.plugin")
+                sed -i "/android {/a \    namespace '${package_name}'" "$file"
+              fi
+            fi
+            if grep -q "kotlin" "$file"; then
+              echo "" >> "$file" 
+              echo "tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { suppressWarnings = true; allWarningsAsErrors = false } }" >> "$file"
+            fi
+          done
+          find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toLowerCase(/.lowercase(/g' {} +
+          find ~/.pub-cache/hosted/ -name "*.kt" -type f -exec sed -i 's/\.toUpperCase(/.uppercase(/g' {} +
+      
+      - name: Auto-Inject App Permissions & Version
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
+          PROJECT_DIR: ${{ env.PROJECT_DIR }} 
+          APP_NAME: ${{ inputs.app_name }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+        run: node scripts/inject-permissions.js
+
+      
+      # --- IN build.yml ---
+      - name: Setup Permanent App Signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          cd ${{ env.PROJECT_DIR }}/android/app
+          
+          # 1. Decode the secret back into a real keystore file
+          echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
+          
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+    
+      # --- UPDATE THIS STEP IN YOUR FLUTTER JOB ---
+      - name: Build Flutter APK
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          echo "Cleaning old C++ and Gradle caches..."
+          flutter clean
+          
+          # Force the App Version via CLI
+          BUILD_NAME="${{ inputs.app_version }}"
+          BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
+          
+          echo "Building ${{ inputs.build_type }} APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
+          
+          # Pass the dynamic build_type flag!
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            flutter build apk --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+          else
+            flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+          fi
+        # --- DOUBLE-CHECK THIS STEP ---
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-apk-${{ github.event.inputs.app_id }}
+          # Flutter puts debug in app-debug.apk and release in app-release.apk
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
+          
+      # --------------------------------------------
+  # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
+  # === =====================================
+  build-native-android:
+    if: inputs.project_category == 'native' && inputs.project_type == 'android_native'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          
+      - name: Unzip Uploaded Source
+        run: |
+          TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
+          unzip -o "$TARGET_DIR/source.zip" -d app_workspace
+
+      - name: Set Project Directory
+        run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+  
+      # --- IN build.yml ---
+      - name: Setup Permanent App Signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          cd ${{ env.PROJECT_DIR }}/android/app
+          
+          # 1. Decode the secret back into a real keystore file
+          echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
+          
+          # 2. Create the properties file for Node.js to read
+          echo "storeFile=appforge.keystore" > keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+      
+      - name: Build Native APK
+        run: |
+          cd app_workspace
+          chmod +x ./gradlew
+          # Use the variable to determine the command!
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
+          
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appforge-apk-${{ github.event.inputs.app_id }}
+          path: app_workspace/app/build/outputs/apk/debug/app-${{ inputs.build_type }}.apk
