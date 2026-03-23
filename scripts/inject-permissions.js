@@ -69,7 +69,48 @@ if (verificationFailed) {
 } else {
     console.log("✅ Local Metadata Verified successfully.");
 }
+// =================================================================
+// 1.5 CLOUD ICON INJECTION
+// =================================================================
+console.log(`\n-> Stage 1.5: Injecting Custom App Icon`);
 
+// The Local CLI names the uploaded icon 'appforge_icon.png' and places it at the root
+// of the unzipped app_workspace.
+const iconSource = path.join(process.cwd(), 'appforge_icon.png');
+
+if (fs.existsSync(iconSource) && fs.existsSync(manifestPath)) {
+    console.log("    - Found custom icon: appforge_icon.png");
+    
+    // Find the 'res' directory where Android stores icons
+    const resDir = path.join(path.dirname(manifestPath), 'res');
+    
+    // The standard Android icon buckets
+    const mipmaps = ['mipmap-mdpi', 'mipmap-hdpi', 'mipmap-xhdpi', 'mipmap-xxhdpi', 'mipmap-xxxhdpi'];
+    
+    let injectedCount = 0;
+    mipmaps.forEach(m => {
+        const targetDir = path.join(resDir, m);
+        if (fs.existsSync(targetDir)) {
+            // Overwrite the default ic_launcher.png
+            fs.copyFileSync(iconSource, path.join(targetDir, 'ic_launcher.png'));
+            
+            // Overwrite the round version if it exists
+            const roundIcon = path.join(targetDir, 'ic_launcher_round.png');
+            if (fs.existsSync(roundIcon)) {
+                fs.copyFileSync(iconSource, roundIcon);
+            }
+            injectedCount++;
+        }
+    });
+
+    if (injectedCount > 0) {
+        console.log(`    ✅ Successfully injected custom icon into ${injectedCount} resolutions.`);
+    } else {
+        console.error(`    ❌ Warning: 'res/mipmap' folders not found. Icon not injected.`);
+    }
+} else {
+    console.log("    - No custom icon found (appforge_icon.png). Using default.");
+}
 // =================================================================
 // 2. UNIVERSAL DEPENDENCY SCANNER
 // =================================================================
