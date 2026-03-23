@@ -41,6 +41,11 @@ on:
         required: false
         type: string
         default: 'com.appforge.app'
+      build_type:
+        description: 'Build mode: debug or release'
+        required: false
+        type: string
+        default: 'debug'
 
 jobs:
   # ==========================================
@@ -113,7 +118,11 @@ jobs:
         run: |
           cd app_workspace/android
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -267,16 +276,16 @@ jobs:
           BUILD_NAME="${{ inputs.app_version }}"
           BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
           
-          echo "Building APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
+          echo "Building ${{ inputs.build_type }} APK for ${{ inputs.app_name }} (${{ inputs.package_id }}) v${BUILD_NAME}..."
           
-          # Pass the build-name and build-number directly to the compiler!
-          flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+          # Pass the dynamic --debug or --release flag!
+          flutter build apk --${{ inputs.build_type }} --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
         
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
   # ==========================================
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
   # === =====================================
@@ -321,10 +330,15 @@ jobs:
         run: |
           cd app_workspace
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          # Use the variable to determine the command!
+          if [ "${{ inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: app_workspace/app/build/outputs/apk/debug/*.apk
+          path: app_workspace/app/build/outputs/apk/debug/app-${{ inputs.build_type }}.apk
