@@ -267,29 +267,29 @@ if (process.platform === 'darwin') {
 }
 
 // =================================================================
-// 6. UNIVERSAL APP SIGNING (FORCE APPEND OVERRIDE)
+// 6. UNIVERSAL APP SIGNING (FINAL ABSOLUTE OVERRIDE)
 // =================================================================
-const buildType = process.env.BUILD_TYPE || 'debug';
 const ksPass = process.env.KS_PASS;
 const ksAlias = process.env.KS_ALIAS;
 const kPass = process.env.K_PASS;
 
 if (targetGradlePath && ksPass && ksAlias && kPass) {
-    console.log(`\n-> Stage 6: Force-Injecting Permanent App Signature (${buildType})`);
+    console.log(`\n-> Stage 6: Force-Injecting Permanent App Signature`);
     try {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
 
-        // We append a BRAND NEW android block to the end of the file. 
-        // Gradle will merge this and our values will overwrite any previous ones.
-        let forceSignBlock = "";
+        // Clean up any old AppForge injections first
+        gradle = gradle.split("// --- FORCE-INJECTED BY APPFORGE ---")[0];
 
+        let forceSignBlock = "";
         if (isKts) {
             forceSignBlock = `
 // --- FORCE-INJECTED BY APPFORGE ---
 android {
     signingConfigs {
         create("appforgeSign") {
+            // Using project.file ensures the path is relative to the app module
             storeFile = file("appforge.keystore")
             storePassword = "${ksPass}"
             keyAlias = "${ksAlias}"
@@ -330,18 +330,12 @@ android {
 `;
         }
 
-        // Clean up any old AppForge injections first to prevent duplicates
-        gradle = gradle.split("// --- FORCE-INJECTED BY APPFORGE ---")[0];
-        
-        // Append the block to the very bottom
         fs.writeFileSync(targetGradlePath, gradle + forceSignBlock);
-        
-        console.log(`    + Android: Permanent signature forced at end of ${path.basename(targetGradlePath)}`);
+        console.log(`    + Android: Permanent signature forced successfully.`);
     } catch(e) {
         console.error(`    - Android: Failed to force signing config.`, e);
     }
 }
-
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
         
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
