@@ -267,7 +267,7 @@ if (process.platform === 'darwin') {
 }
 
 // =================================================================
-// 6. UNIVERSAL APP SIGNING (THE FINAL SHUTDOWN)
+// 6. UNIVERSAL APP SIGNING (TOP-INJECTION OVERRIDE)
 // =================================================================
 const ksPass = process.env.KS_PASS;
 const ksAlias = process.env.KS_ALIAS;
@@ -280,14 +280,16 @@ if (targetGradlePath && ksPass && ksAlias && kPass) {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
 
-        // 1. Remove any previous AppForge injections to prevent infinite appending
-        gradle = gradle.split("// --- FORCE-INJECTED BY APPFORGE ---")[0];
+        // 1. Clean previous AppForge injections
+        gradle = gradle.split("// --- APPFORGE SIGNING START ---")[0];
 
-        let forceSignBlock = "";
+        // 2. Create the blocks
+        let signingConfigBlock = "";
+        let applyToRelease = "";
+        let applyToDebug = "";
+
         if (isKts) {
-            forceSignBlock = `
-// --- FORCE-INJECTED BY APPFORGE ---
-android {
+            signingConfigBlock = `
     signingConfigs {
         create("appforgeSign") {
             storeFile = file("appforge.keystore")
@@ -296,21 +298,11 @@ android {
             keyPassword = "${kPass}"
         }
     }
-    buildTypes {
-        getByName("release") {
-            signingConfig = signingConfigs.getByName("appforgeSign")
-        }
-        getByName("debug") {
-            signingConfig = signingConfigs.getByName("appforgeSign")
-        }
-    }
-}
 `;
+            applyToRelease = 'signingConfig = signingConfigs.getByName("appforgeSign")';
+            applyToDebug = 'signingConfig = signingConfigs.getByName("appforgeSign")';
         } else {
-            // --- UPDATED GROOVY LOGIC FOR CAPACITOR ---
-            forceSignBlock = `
-// --- FORCE-INJECTED BY APPFORGE ---
-android {
+            signingConfigBlock = `
     signingConfigs {
         appforgeSign {
             storeFile file("appforge.keystore")
@@ -319,27 +311,32 @@ android {
             keyPassword "${kPass}"
         }
     }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.appforgeSign
-        }
-        debug {
-            signingConfig signingConfigs.appforgeSign
-        }
-    }
-}
 `;
-            // Capacitor/Standard Android Specific Fix: 
-            // If the file already has a release block, we must strip its existing signingConfig
-            // so our new one at the bottom doesn't conflict.
-            gradle = gradle.replace(/signingConfig signingConfigs\.debug/g, "// removed");
+            applyToRelease = 'signingConfig signingConfigs.appforgeSign';
+            applyToDebug = 'signingConfig signingConfigs.appforgeSign';
         }
 
-        fs.writeFileSync(targetGradlePath, gradle + forceSignBlock);
-        console.log(`    + Android: Permanent signature forced at end of file.`);
+        // --- THE MAGIC INJECTION ---
+
+        // A. Inject signingConfigs at the very top of the android {} block
+        gradle = gradle.replace(/android\s*\{/, `android {\n    // --- APPFORGE SIGNING START ---\n${signingConfigBlock}`);
+
+        // B. Inject the signingConfig command into the release block
+        if (isKts) {
+            gradle = gradle.replace(/getByName\("release"\)\s*\{/, `getByName("release") {\n        ${applyToRelease}`);
+            gradle = gradle.replace(/getByName\("debug"\)\s*\{/, `getByName("debug") {\n        ${applyToDebug}`);
+        } else {
+            // Groovy: find release { ... } and inject
+            gradle = gradle.replace(/release\s*\{/, `release {\n            ${applyToRelease}`);
+            // Force remove any existing signingConfig in debug so our override works
+            gradle = gradle.replace(/signingConfig signingConfigs\.debug/g, `// override`);
+            gradle = gradle.replace(/debug\s*\{/, `debug {\n            ${applyToDebug}`);
+        }
+
+        fs.writeFileSync(targetGradlePath, gradle);
+        console.log(`    + Android: Permanent signature injected into ${isKts ? 'Kotlin' : 'Groovy'} Gradle.`);
     } catch(e) {
         console.error(`    - Android: Failed to force signing config.`, e);
     }
 }
-
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
