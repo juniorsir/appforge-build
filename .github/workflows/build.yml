@@ -74,13 +74,26 @@ jobs:
           TARGET_DIR="apps/${{ github.event.inputs.app_id }}"
           unzip -o "$TARGET_DIR/source.zip" -d app_workspace
 
-      - name: Install JS Dependencies
-        run: cd app_workspace && npm install
-
       - name: Set Project Directory
         run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+
+      - name: Install JS Dependencies
+        run: cd app_workspace && npm install
   
       # --- IN build.yml ---
+      
+      - name: Build Web App
+        run: cd app_workspace && npm run build --if-present
+          
+      - name: Add Android Platform
+        run: |
+          cd app_workspace
+          npm install @capacitor/android
+          npx cap add android
+
+      - name: Capacitor Sync
+        run: cd app_workspace && npx cap sync android
+
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -95,18 +108,6 @@ jobs:
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-      
-      - name: Build Web App
-        run: cd app_workspace && npm run build --if-present
-          
-      - name: Add Android Platform
-        run: |
-          cd app_workspace
-          npm install @capacitor/android
-          npx cap add android
-
-      - name: Capacitor Sync
-        run: cd app_workspace && npx cap sync android
 
       - name: Auto-Inject Native Permissions
         env:
