@@ -109,11 +109,21 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
 
+      # --- IN THE build-android (Web) JOB ---
       - name: Auto-Inject Native Permissions
         env:
           APP_VERSION: ${{ inputs.app_version }}
-        run: node ../scripts/inject-permissions.js
-        working-directory: app_workspace
+          PROJECT_DIR: ${{ env.PROJECT_DIR }} 
+          APP_NAME: ${{ inputs.app_name }}         
+          PACKAGE_ID: ${{ inputs.package_id }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Run from root! No working-directory needed.
+          node scripts/inject-permissions.js
+      # --------------------------------------
 
       - name: Build APK
         run: |
