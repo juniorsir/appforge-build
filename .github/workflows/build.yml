@@ -129,7 +129,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
+          path: app_workspace/android/app/build/outputs/apk/${{ inputs.build_type }}/*.apk
 
   build-ios:
     if: inputs.project_category == 'web' && (inputs.platform == 'ios' || inputs.platform == 'both')
