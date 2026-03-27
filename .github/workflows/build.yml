@@ -94,6 +94,18 @@ jobs:
       - name: Capacitor Sync
         run: cd app_workspace && npx cap sync android
 
+      - name: Generate Native Icons & Splash Screens
+        run: |
+          cd app_workspace
+          # Only run if the user provided an icon in the assets folder
+          if [ -d "assets" ] && [ -f "assets/icon.png" ]; then
+            echo "Generating high-res native icons using @capacitor/assets..."
+            npm install -g @capacitor/assets
+            npx capacitor-assets generate --android
+          else
+            echo "No custom assets found. Using default Capacitor icons."
+          fi
+
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
