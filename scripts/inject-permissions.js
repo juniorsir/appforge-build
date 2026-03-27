@@ -267,12 +267,12 @@ if (process.platform === 'darwin') {
 }
 
 // =================================================================
-// 6. UNIVERSAL APP SIGNING (TOP-INJECTION OVERRIDE)
+// 6. UNIVERSAL APP SIGNING (ABSOLUTE PATH OVERRIDE)
 // =================================================================
+const buildType = process.env.BUILD_TYPE || 'debug';
 const ksPass = process.env.KS_PASS;
 const ksAlias = process.env.KS_ALIAS;
 const kPass = process.env.K_PASS;
-const buildType = process.env.BUILD_TYPE || 'debug';
 
 if (targetGradlePath && ksPass && ksAlias && kPass) {
     console.log(`\n-> Stage 6: Force-Injecting Permanent App Signature (${buildType})`);
@@ -280,61 +280,69 @@ if (targetGradlePath && ksPass && ksAlias && kPass) {
         let gradle = fs.readFileSync(targetGradlePath, 'utf8');
         const isKts = targetGradlePath.endsWith('.kts');
 
-        // 1. Clean previous AppForge injections
-        gradle = gradle.split("// --- APPFORGE SIGNING START ---")[0];
+        // Remove any previous AppForge injections
+        gradle = gradle.split("// --- FORCE-INJECTED BY APPFORGE ---")[0];
+        
+        // Remove existing debug references in release blocks
+        gradle = gradle.replace(/signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)/g, "");
+        gradle = gradle.replace(/signingConfig\s+signingConfigs\.debug/g, "");
 
-        // 2. Create the blocks
-        let signingConfigBlock = "";
-        let applyToRelease = "";
-        let applyToDebug = "";
+        // --- CRITICAL FIX: Use the absolute path to the keystore! ---
+        // We know the GitHub Action placed it in android/app/appforge.keystore
+        const absoluteKeystorePath = path.join(baseDir, 'android', 'app', 'appforge.keystore')
+            .replace(/\\/g, '/'); // Ensure forward slashes for Gradle
 
+        let forceSignBlock = "";
+        
         if (isKts) {
-            signingConfigBlock = `
+            forceSignBlock = `
+// --- FORCE-INJECTED BY APPFORGE ---
+android {
     signingConfigs {
         create("appforgeSign") {
-            storeFile = file("appforge.keystore")
+            storeFile = file("${absoluteKeystorePath}")
             storePassword = "${ksPass}"
             keyAlias = "${ksAlias}"
             keyPassword = "${kPass}"
         }
     }
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("appforgeSign")
+        }
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("appforgeSign")
+        }
+    }
+}
 `;
-            applyToRelease = 'signingConfig = signingConfigs.getByName("appforgeSign")';
-            applyToDebug = 'signingConfig = signingConfigs.getByName("appforgeSign")';
         } else {
-            signingConfigBlock = `
+            forceSignBlock = `
+// --- FORCE-INJECTED BY APPFORGE ---
+android {
     signingConfigs {
         appforgeSign {
-            storeFile file("appforge.keystore")
+            storeFile file("${absoluteKeystorePath}")
             storePassword "${ksPass}"
             keyAlias "${ksAlias}"
             keyPassword "${kPass}"
         }
     }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.appforgeSign
+        }
+        debug {
+            signingConfig signingConfigs.appforgeSign
+        }
+    }
+}
 `;
-            applyToRelease = 'signingConfig signingConfigs.appforgeSign';
-            applyToDebug = 'signingConfig signingConfigs.appforgeSign';
         }
 
-        // --- THE MAGIC INJECTION ---
-
-        // A. Inject signingConfigs at the very top of the android {} block
-        gradle = gradle.replace(/android\s*\{/, `android {\n    // --- APPFORGE SIGNING START ---\n${signingConfigBlock}`);
-
-        // B. Inject the signingConfig command into the release block
-        if (isKts) {
-            gradle = gradle.replace(/getByName\("release"\)\s*\{/, `getByName("release") {\n        ${applyToRelease}`);
-            gradle = gradle.replace(/getByName\("debug"\)\s*\{/, `getByName("debug") {\n        ${applyToDebug}`);
-        } else {
-            // Groovy: find release { ... } and inject
-            gradle = gradle.replace(/release\s*\{/, `release {\n            ${applyToRelease}`);
-            // Force remove any existing signingConfig in debug so our override works
-            gradle = gradle.replace(/signingConfig signingConfigs\.debug/g, `// override`);
-            gradle = gradle.replace(/debug\s*\{/, `debug {\n            ${applyToDebug}`);
-        }
-
-        fs.writeFileSync(targetGradlePath, gradle);
-        console.log(`    + Android: Permanent signature injected into ${isKts ? 'Kotlin' : 'Groovy'} Gradle.`);
+        // Append to the absolute bottom of the file
+        fs.writeFileSync(targetGradlePath, gradle + "\n" + forceSignBlock);
+        console.log(`    + Android: Permanent signature forced (Path: ${absoluteKeystorePath})`);
     } catch(e) {
         console.error(`    - Android: Failed to force signing config.`, e);
     }
