@@ -349,40 +349,60 @@ android {
 }
 
 // =================================================================
-// 7. DESKTOP METADATA & ICON INJECTION
+// 7. DESKTOP METADATA & ICON INJECTION (Windows & Linux)
 // =================================================================
-// --- WINDOWS ---
-const winMainCpp = path.join(baseDir, 'windows', 'runner', 'main.cpp');
-if (fs.existsSync(winMainCpp)) {
-    let content = fs.readFileSync(winMainCpp, 'utf8');
-    // Change window title
-    content = content.replace(/window\.CreateAndShow\(L"[^"]+"/, `window.CreateAndShow(L"${appName}"`);
-    fs.writeFileSync(winMainCpp, content);
-    console.log("    + Windows: Set Window Title");
+console.log(`\n-> Stage 7: Injecting Desktop Metadata`);
+
+const binarySlug = appName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || 'appforge_app';
+
+// A. WINDOWS
+const winCmakePath = path.join(baseDir, 'windows', 'CMakeLists.txt');
+if (fs.existsSync(winCmakePath)) {
+    try {
+        let cmake = fs.readFileSync(winCmakePath, 'utf8');
+        // Force the .exe binary name
+        cmake = cmake.replace(/set\(BINARY_NAME "[^"]+"\)/g, `set(BINARY_NAME "${binarySlug}")`);
+        fs.writeFileSync(winCmakePath, cmake);
+        console.log(`    + Windows: Forced Binary Name to "${binarySlug}.exe"`);
+    } catch(e) { console.error("    - Windows: Failed to inject CMake."); }
     
-    if (fs.existsSync(iconSource)) {
-        // Windows uses .ico, but we can replace the runner.ico 
-        // with a PNG and most modern compilers will handle it, 
-        // but for safety, we just place the PNG for now.
-        const winIconPath = path.join(baseDir, 'windows', 'runner', 'resources', 'app_icon.ico');
-        // Note: Real conversion to .ico usually requires 'magick'
+    const winMainPath = path.join(baseDir, 'windows', 'runner', 'main.cpp');
+    if (fs.existsSync(winMainPath)) {
+        try {
+            let mainCpp = fs.readFileSync(winMainPath, 'utf8');
+            // Force the Window Title
+            mainCpp = mainCpp.replace(/window\.CreateAndShow\(L"[^"]+"/, `window.CreateAndShow(L"${appName}"`);
+            fs.writeFileSync(winMainPath, mainCpp);
+            console.log(`    + Windows: Forced Window Title to "${appName}"`);
+        } catch(e) { console.error("    - Windows: Failed to inject main.cpp."); }
     }
 }
 
-// --- LINUX ---
-const linuxAppCc = path.join(baseDir, 'linux', 'my_application.cc');
-if (fs.existsSync(linuxAppCc)) {
-    let content = fs.readFileSync(linuxAppCc, 'utf8');
-    // Change window title
-    content = content.replace(/gtk_window_set_title\(GTK_WINDOW\(window\), "[^"]+"\)/, `gtk_window_set_title(GTK_WINDOW(window), "${appName}")`);
-    fs.writeFileSync(linuxAppCc, content);
-    console.log("    + Linux: Set Window Title");
+// B. LINUX
+const linuxCmakePath = path.join(baseDir, 'linux', 'CMakeLists.txt');
+if (fs.existsSync(linuxCmakePath)) {
+    try {
+        let cmake = fs.readFileSync(linuxCmakePath, 'utf8');
+        cmake = cmake.replace(/set\(BINARY_NAME "[^"]+"\)/g, `set(BINARY_NAME "${binarySlug}")`);
+        fs.writeFileSync(linuxCmakePath, cmake);
+        console.log(`    + Linux: Forced Binary Name to "${binarySlug}"`);
+    } catch(e) {}
 
-    if (fs.existsSync(iconSource)) {
-        const linuxIconDir = path.join(baseDir, 'linux', 'flutter', 'assets');
-        if (!fs.existsSync(linuxIconDir)) fs.mkdirSync(linuxIconDir, {recursive: true});
-        fs.copyFileSync(iconSource, path.join(linuxIconDir, 'icon.png'));
-        console.log("    + Linux: Injected App Icon");
+    // Find the .cc file (usually my_application.cc)
+    const linuxDir = path.join(baseDir, 'linux');
+    if (fs.existsSync(linuxDir)) {
+        const files = fs.readdirSync(linuxDir);
+        for (const file of files) {
+            if (file.endsWith('.cc')) {
+                const ccPath = path.join(linuxDir, file);
+                try {
+                    let appCc = fs.readFileSync(ccPath, 'utf8');
+                    appCc = appCc.replace(/gtk_window_set_title\(GTK_WINDOW\(window\), "[^"]+"\)/g, `gtk_window_set_title(GTK_WINDOW(window), "${appName}")`);
+                    fs.writeFileSync(ccPath, appCc);
+                    console.log(`    + Linux: Forced Window Title in ${file}`);
+                } catch(e) {}
+            }
+        }
     }
 }
 console.log("\n✅ Cloud Engine Initialization Complete. Proceeding to compile...");
