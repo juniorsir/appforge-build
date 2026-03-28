@@ -420,6 +420,7 @@ jobs:
           sed -i '/resolution: workspace/d' pubspec.yaml || true
           flutter config --enable-windows-desktop
 
+      # --- 1. GENERATE FOLDERS FIRST ---
       - name: Force Regenerate Native Folders
         shell: bash
         run: |
@@ -428,14 +429,15 @@ jobs:
           rm -rf windows/
           flutter create --org $ORG_NAME --platforms=windows .
           
+      # --- 2. INSTALL DEPENDENCIES ---
       - name: Install Dependencies
         shell: bash
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
         
+      # --- 3. CONVERT ICON (Now the folder exists!) ---
       - name: Convert PNG to Windows ICO
         shell: bash
         run: |
-          # The icon is always placed at the root of app_workspace
           if [ -f "app_workspace/appforge_icon.png" ]; then
             pip install pillow
             python -c "from PIL import Image; img = Image.open('app_workspace/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
@@ -444,6 +446,7 @@ jobs:
             echo "No custom icon found. Using default."
           fi
 
+      # --- 4. INJECT METADATA ---
       - name: Auto-Inject Metadata
         env:
           APP_VERSION: ${{ inputs.app_version }}
@@ -454,6 +457,7 @@ jobs:
         run: node scripts/inject-permissions.js
         shell: bash
 
+      # --- 5. BUILD THE APP ---
       - name: Build Windows Desktop App
         shell: bash
         run: |
@@ -473,95 +477,3 @@ jobs:
         with:
           name: appforge-windows-${{ inputs.app_id }}
           path: ${{ env.PROJECT_DIR }}\appforge-windows.zip
-
-  # ==========================================
-  # 5. FLUTTER LINUX BUILDER
-  # ==========================================
-  build-linux:
-    if: |
-      inputs.project_category == 'native' && 
-      inputs.project_type == 'flutter' && 
-      (contains(inputs.platform, 'linux') || contains(inputs.platform, 'all'))
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Linux Build Requirements
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
-      
-      - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Unzip Uploaded Source
-        run: unzip -o "apps/${{ inputs.app_id }}/source.zip" -d app_workspace
-
-      - name: Set Project Directory
-        run: |
-          if [ "${{ inputs.sub_path }}" != "." ]; then
-            echo "PROJECT_DIR=app_workspace/${{ inputs.sub_path }}" >> $GITHUB_ENV
-          else
-            echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
-          fi
-
-      - name: Sanitize Pubspec & Enable Linux
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
-          sed -i '/resolution: workspace/d' pubspec.yaml || true
-          flutter config --enable-linux-desktop
-
-      - name: Force Regenerate Native Folders
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
-          rm -rf linux/
-          flutter create --org $ORG_NAME --platforms=linux .
-
-      - name: Install Dependencies
-        run: cd ${{ env.PROJECT_DIR }} && flutter pub get
-
-      - name: Auto-Inject Metadata
-        env:
-          APP_VERSION: ${{ inputs.app_version }}
-          PROJECT_DIR: ${{ env.PROJECT_DIR }} 
-          APP_NAME: ${{ inputs.app_name }}
-          PACKAGE_ID: ${{ inputs.package_id }}
-          BUILD_TYPE: ${{ inputs.build_type }}
-        run: node scripts/inject-permissions.js
-
-      - name: Inject Icon into Linux Bundle
-        run: |
-          # Copy the custom icon to where Linux expects it
-          if [ -f "app_workspace/appforge_icon.png" ]; then
-            mkdir -p ${{ env.PROJECT_DIR }}/linux/flutter/assets
-            cp app_workspace/appforge_icon.png ${{ env.PROJECT_DIR }}/linux/flutter/assets/icon.png
-          fi
-
-      - name: Build Linux Desktop App
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          BUILD_NAME="${{ inputs.app_version }}"
-          BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
-          flutter build linux --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
-
-      - name: Zip Linux Artifact
-        run: |
-          cd ${{ env.PROJECT_DIR }}/build/linux/x64/release/bundle
-          zip -r ../../../../../appforge-linux.zip .
-        
-      - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: appforge-linux-${{ inputs.app_id }}
-          path: ${{ env.PROJECT_DIR }}/appforge-linux.zip
