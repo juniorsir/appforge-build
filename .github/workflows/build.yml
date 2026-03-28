@@ -430,6 +430,22 @@ jobs:
           flutter config --enable-windows-desktop
           flutter pub get
 
+      - name: Install Icon Converter
+        run: pip install pillow  # We use Python's Pillow to convert PNG to ICO
+        
+      - name: Convert PNG to Windows ICO
+        run: |
+          # Small python script to convert your logo to 256px ICO
+          python -c "from PIL import Image; img = Image.open('app_workspace/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
+        shell: bash
+
+      - name: Auto-Inject Metadata
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PROJECT_DIR: ${{ env.PROJECT_DIR }}
+        run: node scripts/inject-permissions.js
+
       - name: Build Windows Desktop App
         run: |
           cd ${{ env.PROJECT_DIR }}
@@ -482,6 +498,23 @@ jobs:
           else
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
+
+      - name: Auto-Inject Metadata
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          PROJECT_DIR: ${{ env.PROJECT_DIR }}
+        run: node scripts/inject-permissions.js
+
+      - name: Build Linux Desktop App
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          flutter build linux --release
+
+      - name: Inject Icon into Linux Bundle
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          # Copy your custom icon into the compiled bundle
+          cp appforge_icon.png build/linux/x64/release/bundle/data/flutter_assets/appforge_icon.png
 
       - name: Disable Workspace Resolution
         run: |
