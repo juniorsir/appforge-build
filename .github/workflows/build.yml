@@ -1,5 +1,5 @@
 name: AppForge Cloud Build
-
+run-name: "AppForge Build [ID: ${{ inputs.app_id }}] - ${{ inputs.app_name }}"
 on:
   workflow_dispatch:
     inputs:
