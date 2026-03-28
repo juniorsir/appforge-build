@@ -372,7 +372,10 @@ jobs:
   # ==========================================
   build-windows:
     # Check if the user typed 'windows' in their platform choice
-    if: inputs.project_category == 'native' && inputs.project_type == 'flutter' && contains(inputs.platform, 'windows')
+    if: |
+      inputs.project_category == 'native' && 
+      inputs.project_type == 'flutter' && 
+      (contains(inputs.platform, 'windows') || contains(inputs.platform, 'all'))
     runs-on: windows-latest
     steps:
       - name: Checkout Repository
@@ -423,7 +426,10 @@ jobs:
   # 5. FLUTTER LINUX BUILDER
   # ==========================================
   build-linux:
-    if: inputs.project_category == 'native' && inputs.project_type == 'flutter' && contains(inputs.platform, 'linux')
+    if: |
+      inputs.project_category == 'native' && 
+      inputs.project_type == 'flutter' && 
+      (contains(inputs.platform, 'linux') || contains(inputs.platform, 'all'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
