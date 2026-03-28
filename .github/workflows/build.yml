@@ -238,6 +238,14 @@ jobs:
           rm -rf android/
           flutter create --org $ORG_NAME --platforms=android .
 
+      - name: Sanitize Pubspec (Remove Broken Monorepo Links)
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          # Delete the analysis_defaults dependency (the line and the one after it)
+          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
+          # Delete workspace resolution
+          sed -i '/resolution: workspace/d' pubspec.yaml || true
+
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
 
@@ -406,6 +414,16 @@ jobs:
           (Get-Content pubspec.yaml) -replace 'resolution:\s*workspace', '' | Set-Content pubspec.yaml
         shell: pwsh
 
+      - name: Sanitize Pubspec
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          (Get-Content pubspec.yaml) -replace 'resolution:\s*workspace', '' | Set-Content pubspec.yaml
+          # Remove analysis_defaults block
+          $content = Get-Content pubspec.yaml
+          $newContent = $content | Where-Object { $_ -notmatch 'analysis_defaults:' -and $_ -notmatch 'path:.*analysis_defaults' }
+          $newContent | Set-Content pubspec.yaml
+        shell: pwsh
+
       - name: Install Dependencies & Enable Windows
         run: |
           cd ${{ env.PROJECT_DIR }}
@@ -469,6 +487,14 @@ jobs:
         run: |
           cd ${{ env.PROJECT_DIR }}
           sed -i '/resolution: workspace/d' pubspec.yaml
+
+      - name: Sanitize Pubspec (Remove Broken Monorepo Links)
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          # Delete the analysis_defaults dependency (the line and the one after it)
+          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
+          # Delete workspace resolution
+          sed -i '/resolution: workspace/d' pubspec.yaml || true
 
       - name: Install Dependencies & Enable Linux
         run: |
