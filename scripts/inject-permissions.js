@@ -351,7 +351,6 @@ android {
 // =================================================================
 // 7. DESKTOP METADATA & ICON INJECTION
 // =================================================================
-const appName = process.env.APP_NAME || 'AppForge App';
 const iconSource = path.join(baseDir, 'appforge_icon.png');
 
 // --- WINDOWS ---
