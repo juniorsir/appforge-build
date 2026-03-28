@@ -399,6 +399,13 @@ jobs:
             echo "PROJECT_DIR=app_workspace" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
 
+      - name: Disable Workspace Resolution (Fix for Flutter Samples)
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          # PowerShell: Read file, remove the workspace line, and save it back
+          (Get-Content pubspec.yaml) -replace 'resolution:\s*workspace', '' | Set-Content pubspec.yaml
+        shell: pwsh
+
       - name: Install Dependencies & Enable Windows
         run: |
           cd ${{ env.PROJECT_DIR }}
@@ -457,6 +464,11 @@ jobs:
           else
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
+
+      - name: Disable Workspace Resolution
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          sed -i '/resolution: workspace/d' pubspec.yaml
 
       - name: Install Dependencies & Enable Linux
         run: |
