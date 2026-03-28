@@ -424,20 +424,27 @@ jobs:
           $newContent | Set-Content pubspec.yaml
         shell: pwsh
 
-      - name: Install Dependencies & Enable Windows
+      - name: Force Regenerate Native Folders
         run: |
           cd ${{ env.PROJECT_DIR }}
-          flutter config --enable-windows-desktop
-          flutter pub get
-
-      - name: Install Icon Converter
-        run: pip install pillow  # We use Python's Pillow to convert PNG to ICO
+          ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
+          rm -rf windows/
+          flutter create --org $ORG_NAME --platforms=windows .
+          
+      - name: Install Dependencies
+        run: cd ${{ env.PROJECT_DIR }} && flutter pub get
         
       - name: Convert PNG to Windows ICO
         run: |
-          # Small python script to convert your logo to 256px ICO
-          python -c "from PIL import Image; img = Image.open('app_workspace/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
-        shell: bash
+          # Only run if the user actually provided an icon
+          if (Test-Path "${{ env.PROJECT_DIR }}\appforge_icon.png") {
+            pip install pillow
+            python -c "from PIL import Image; img = Image.open('${{ env.PROJECT_DIR }}/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
+            echo "Windows .ico generated successfully."
+          } else {
+            echo "No custom icon found. Using default."
+          }
+        shell: pwsh
 
       - name: Auto-Inject Metadata
         env:
