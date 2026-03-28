@@ -351,8 +351,6 @@ android {
 // =================================================================
 // 7. DESKTOP METADATA & ICON INJECTION
 // =================================================================
-const iconSource = path.join(baseDir, 'appforge_icon.png');
-
 // --- WINDOWS ---
 const winMainCpp = path.join(baseDir, 'windows', 'runner', 'main.cpp');
 if (fs.existsSync(winMainCpp)) {
