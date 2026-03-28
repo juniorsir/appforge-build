@@ -198,7 +198,10 @@ jobs:
   # 2. FLUTTER BUILDER (PERFECT ORDER)
   # ==========================================
   build-flutter:
-    if: inputs.project_category == 'native' && inputs.project_type == 'flutter'
+    if: |
+      inputs.project_category == 'native' && 
+      inputs.project_type == 'flutter' && 
+      (contains(inputs.platform, 'android') || contains(inputs.platform, 'all') || contains(inputs.platform, 'both'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
