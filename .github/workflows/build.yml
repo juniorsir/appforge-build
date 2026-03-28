@@ -379,7 +379,6 @@ jobs:
   # 4. FLUTTER WINDOWS BUILDER (.exe)
   # ==========================================
   build-windows:
-    # Check if the user typed 'windows' in their platform choice
     if: |
       inputs.project_category == 'native' && 
       inputs.project_type == 'flutter' && 
@@ -389,6 +388,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
@@ -396,35 +400,28 @@ jobs:
           cache: true
 
       - name: Unzip Uploaded Source
-        # Using PowerShell Expand-Archive for Windows runner
+        shell: pwsh
         run: Expand-Archive -Path "apps\${{ inputs.app_id }}\source.zip" -DestinationPath app_workspace
 
       - name: Set Project Directory
+        shell: bash
         run: |
-          if ("${{ inputs.sub_path }}" -ne ".") {
-            echo "PROJECT_DIR=app_workspace\${{ inputs.sub_path }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          } else {
-            echo "PROJECT_DIR=app_workspace" | Out-File -FilePath $env:GITHUB_ENV -Append
-          }
+          if [ "${{ inputs.sub_path }}" != "." ]; then
+            echo "PROJECT_DIR=app_workspace/${{ inputs.sub_path }}" >> $GITHUB_ENV
+          else
+            echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+          fi
 
-      - name: Disable Workspace Resolution (Fix for Flutter Samples)
+      - name: Sanitize Pubspec & Enable Windows
+        shell: bash
         run: |
           cd ${{ env.PROJECT_DIR }}
-          # PowerShell: Read file, remove the workspace line, and save it back
-          (Get-Content pubspec.yaml) -replace 'resolution:\s*workspace', '' | Set-Content pubspec.yaml
-        shell: pwsh
-
-      - name: Sanitize Pubspec
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          (Get-Content pubspec.yaml) -replace 'resolution:\s*workspace', '' | Set-Content pubspec.yaml
-          # Remove analysis_defaults block
-          $content = Get-Content pubspec.yaml
-          $newContent = $content | Where-Object { $_ -notmatch 'analysis_defaults:' -and $_ -notmatch 'path:.*analysis_defaults' }
-          $newContent | Set-Content pubspec.yaml
-        shell: pwsh
+          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
+          sed -i '/resolution: workspace/d' pubspec.yaml || true
+          flutter config --enable-windows-desktop
 
       - name: Force Regenerate Native Folders
+        shell: bash
         run: |
           cd ${{ env.PROJECT_DIR }}
           ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
@@ -432,33 +429,41 @@ jobs:
           flutter create --org $ORG_NAME --platforms=windows .
           
       - name: Install Dependencies
+        shell: bash
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
         
       - name: Convert PNG to Windows ICO
+        shell: bash
         run: |
-          # Only run if the user actually provided an icon
-          if (Test-Path "${{ env.PROJECT_DIR }}\appforge_icon.png") {
+          # The icon is always placed at the root of app_workspace
+          if [ -f "app_workspace/appforge_icon.png" ]; then
             pip install pillow
-            python -c "from PIL import Image; img = Image.open('${{ env.PROJECT_DIR }}/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
+            python -c "from PIL import Image; img = Image.open('app_workspace/appforge_icon.png'); img.save('${{ env.PROJECT_DIR }}/windows/runner/resources/app_icon.ico', sizes=[(256,256)])"
             echo "Windows .ico generated successfully."
-          } else {
+          else
             echo "No custom icon found. Using default."
-          }
-        shell: pwsh
+          fi
 
       - name: Auto-Inject Metadata
         env:
+          APP_VERSION: ${{ inputs.app_version }}
+          PROJECT_DIR: ${{ env.PROJECT_DIR }} 
           APP_NAME: ${{ inputs.app_name }}
           PACKAGE_ID: ${{ inputs.package_id }}
-          PROJECT_DIR: ${{ env.PROJECT_DIR }}
+          BUILD_TYPE: ${{ inputs.build_type }}
         run: node scripts/inject-permissions.js
+        shell: bash
 
       - name: Build Windows Desktop App
+        shell: bash
         run: |
           cd ${{ env.PROJECT_DIR }}
-          flutter build windows --release
+          BUILD_NAME="${{ inputs.app_version }}"
+          BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
+          flutter build windows --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
       - name: Zip Windows Artifact
+        shell: pwsh
         run: |
           cd ${{ env.PROJECT_DIR }}
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath appforge-windows.zip
@@ -468,7 +473,6 @@ jobs:
         with:
           name: appforge-windows-${{ inputs.app_id }}
           path: ${{ env.PROJECT_DIR }}\appforge-windows.zip
-
 
   # ==========================================
   # 5. FLUTTER LINUX BUILDER
@@ -483,8 +487,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install Linux Build Requirements
-        # Flutter Linux requires these C++ and GTK libraries to compile
         run: |
           sudo apt-get update -y
           sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
@@ -506,46 +514,46 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      - name: Auto-Inject Metadata
-        env:
-          APP_NAME: ${{ inputs.app_name }}
-          PROJECT_DIR: ${{ env.PROJECT_DIR }}
-        run: node scripts/inject-permissions.js
-
-      - name: Build Linux Desktop App
+      - name: Sanitize Pubspec & Enable Linux
         run: |
           cd ${{ env.PROJECT_DIR }}
-          flutter build linux --release
+          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
+          sed -i '/resolution: workspace/d' pubspec.yaml || true
+          flutter config --enable-linux-desktop
+
+      - name: Force Regenerate Native Folders
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          ORG_NAME=$(echo "${{ inputs.package_id }}" | rev | cut -d. -f2- | rev)
+          rm -rf linux/
+          flutter create --org $ORG_NAME --platforms=linux .
+
+      - name: Install Dependencies
+        run: cd ${{ env.PROJECT_DIR }} && flutter pub get
+
+      - name: Auto-Inject Metadata
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
+          PROJECT_DIR: ${{ env.PROJECT_DIR }} 
+          APP_NAME: ${{ inputs.app_name }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+        run: node scripts/inject-permissions.js
 
       - name: Inject Icon into Linux Bundle
         run: |
-          cd ${{ env.PROJECT_DIR }}
-          # Copy your custom icon into the compiled bundle
-          cp appforge_icon.png build/linux/x64/release/bundle/data/flutter_assets/appforge_icon.png
-
-      - name: Disable Workspace Resolution
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          sed -i '/resolution: workspace/d' pubspec.yaml
-
-      - name: Sanitize Pubspec (Remove Broken Monorepo Links)
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          # Delete the analysis_defaults dependency (the line and the one after it)
-          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
-          # Delete workspace resolution
-          sed -i '/resolution: workspace/d' pubspec.yaml || true
-
-      - name: Install Dependencies & Enable Linux
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          flutter config --enable-linux-desktop
-          flutter pub get
+          # Copy the custom icon to where Linux expects it
+          if [ -f "app_workspace/appforge_icon.png" ]; then
+            mkdir -p ${{ env.PROJECT_DIR }}/linux/flutter/assets
+            cp app_workspace/appforge_icon.png ${{ env.PROJECT_DIR }}/linux/flutter/assets/icon.png
+          fi
 
       - name: Build Linux Desktop App
         run: |
           cd ${{ env.PROJECT_DIR }}
-          flutter build linux --release
+          BUILD_NAME="${{ inputs.app_version }}"
+          BUILD_NUMBER=$(echo "${{ inputs.app_version }}" | awk -F. '{printf "%d%02d%02d\n", $1, $2, $3}')
+          flutter build linux --release --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
       - name: Zip Linux Artifact
         run: |
