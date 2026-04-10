@@ -152,6 +152,7 @@ jobs:
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/android/app/build/outputs/apk/${{ inputs.build_type }}/*.apk
+          retention-days: 1
 
   build-ios:
     if: inputs.project_category == 'web' && (inputs.platform == 'ios' || inputs.platform == 'both')
@@ -193,6 +194,7 @@ jobs:
         with:
           name: appforge-ios-${{ github.event.inputs.app_id }}
           path: app_workspace/ios-project.zip
+          retention-days: 1
 
   # ==========================================
   # 2. FLUTTER BUILDER (PERFECT ORDER)
@@ -350,7 +352,7 @@ jobs:
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
-          
+          retention-days: 1
             
       # --------------------------------------------
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
@@ -408,6 +410,7 @@ jobs:
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
           path: app_workspace/app/build/outputs/apk/${{ inputs.build_type }}/*.apk
+          retention-days: 1
 
   # ==========================================
   # 4. FLUTTER WINDOWS BUILDER (.exe)
@@ -540,6 +543,7 @@ jobs:
         with:
           name: appforge-windows-${{ inputs.app_id }}
           path: ${{ env.PROJECT_DIR }}\appforge-windows.zip
+          retention-days: 1
 
   # ==========================================
   # 5. FLUTTER LINUX BUILDER
@@ -657,3 +661,4 @@ jobs:
           name: appforge-linux-${{ inputs.app_id }}
           # The path points to the zip file we just created in the root of PROJECT_DIR
           path: ${{ env.PROJECT_DIR }}/appforge-linux.zip
+          retention-days: 1
