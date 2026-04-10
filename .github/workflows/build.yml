@@ -247,27 +247,37 @@ jobs:
           # Run flutter create (the platforms flag will generate whatever the current OS needs)
           flutter create --org $ORG_NAME .
 
-      # --- UPDATE THIS IN build-linux AND build-flutter ---
-      - name: Sanitize Pubspec (Remove Broken Monorepo Links)
+      # --- REPLACE SANITIZE PUBSPEC WITH THIS ---
+      - name: Isolate Project & Sanitize (Nuclear Monorepo Fix)
         run: |
+          # 1. If we are in a sub-path, move the project out and delete the rest!
+          if [ "${{ inputs.sub_path }}" != "." ]; then
+            echo "Isolating sub-project: ${{ inputs.sub_path }}"
+            mv "app_workspace/${{ inputs.sub_path }}" app_workspace_temp
+            rm -rf app_workspace
+            mv app_workspace_temp app_workspace
+            # Now the project IS the root workspace!
+            echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
+          fi
+
+          # 2. Now we are guaranteed to be in the root of the actual app
           cd app_workspace
-          echo "Scanning and sanitizing all pubspec.yaml files..."
           
-          # A bulletproof loop to find and sanitize every pubspec.yaml file
-          find . -name "pubspec.yaml" -type f | while read file; do
-            echo "Sanitizing: $file"
+          # 3. Aggressively strip monorepo garbage from the ONLY pubspec that matters
+          if [ -f "pubspec.yaml" ]; then
+            # Convert Windows line endings to Unix just in case
+            sed -i 's/\r$//' pubspec.yaml
             
-            # Delete the 'resolution: workspace' line
-            sed -i '/resolution: workspace/d' "$file" || true
+            # Delete the offending lines
+            sed -i '/resolution: workspace/d' pubspec.yaml || true
+            sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
+            sed -i '/publish_to:/d' pubspec.yaml || true
             
-            # Delete the 'analysis_defaults' block (the line and the path below it)
-            sed -i '/analysis_defaults:/,+1d' "$file" || true
-            
-            # Also remove 'publish_to: none' just in case it causes conflicts
-            sed -i '/publish_to:/d' "$file" || true
-          done
-          
-          echo "Sanitization complete."
+            echo "Sanitization complete."
+          else
+            echo "No pubspec.yaml found in isolated directory!"
+            exit 1
+          fi
 
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
@@ -435,32 +445,35 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      # --- UPDATE THIS IN build-windows ---
-      - name: Sanitize Pubspec & Enable Windows
+      # --- REPLACE SANITIZE PUBSPEC WITH THIS ---
+      - name: Isolate Project & Sanitize (Nuclear Monorepo Fix)
         shell: pwsh
         run: |
+          # 1. Isolate the sub-project
+          if ("${{ inputs.sub_path }}" -ne ".") {
+            Write-Host "Isolating sub-project: ${{ inputs.sub_path }}"
+            Move-Item -Path "app_workspace\${{ inputs.sub_path }}" -Destination "app_workspace_temp"
+            Remove-Item -Recurse -Force "app_workspace"
+            Rename-Item -Path "app_workspace_temp" -NewName "app_workspace"
+            # Update env var
+            echo "PROJECT_DIR=app_workspace" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+
+          # 2. Sanitize the main pubspec
           cd app_workspace
-          echo "Scanning and sanitizing all pubspec.yaml files..."
-          
-          # Find all pubspec.yaml files and remove broken links
-          Get-ChildItem -Path . -Filter "pubspec.yaml" -Recurse | ForEach-Object {
-            $filePath = $_.FullName
-            echo "Sanitizing: $filePath"
-            
-            # Read content, filter out bad lines, write back
-            $content = Get-Content $filePath
+          if (Test-Path "pubspec.yaml") {
+            $content = Get-Content "pubspec.yaml"
             $newContent = $content | Where-Object { 
               $_ -notmatch 'analysis_defaults:' -and 
               $_ -notmatch 'path:.*analysis_defaults' -and 
               $_ -notmatch 'resolution:\s*workspace' -and
               $_ -notmatch 'publish_to:'
             }
-            $newContent | Set-Content $filePath
+            $newContent | Set-Content "pubspec.yaml"
+            Write-Host "Sanitization complete."
           }
           
-          echo "Sanitization complete. Enabling Windows Desktop..."
           flutter config --enable-windows-desktop
-
       # --- 1. GENERATE FOLDERS FIRST ---
       - name: Force Regenerate Native Folders
         shell: bash
