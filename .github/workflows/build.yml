@@ -247,13 +247,19 @@ jobs:
           # Run flutter create (the platforms flag will generate whatever the current OS needs)
           flutter create --org $ORG_NAME .
 
+      # --- UPDATE THIS STEP FOR LINUX AND ANDROID FLUTTER JOBS ---
       - name: Sanitize Pubspec (Remove Broken Monorepo Links)
         run: |
-          cd ${{ env.PROJECT_DIR }}
-          # Delete the analysis_defaults dependency (the line and the one after it)
-          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
-          # Delete workspace resolution
-          sed -i '/resolution: workspace/d' pubspec.yaml || true
+          cd app_workspace
+          echo "Scanning and sanitizing all pubspec.yaml files..."
+          
+          # Find all pubspec.yaml files recursively and strip broken links
+          find . -name "pubspec.yaml" -type f -exec sed -i '/analysis_defaults:/,+1d' {} + || true
+          find . -name "pubspec.yaml" -type f -exec sed -i '/resolution: workspace/d' {} + || true
+          
+          # For Linux job only (delete this line for Android job):
+          flutter config --enable-linux-desktop
+      # ---------------------------------------------------------
 
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
@@ -536,12 +542,19 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      - name: Sanitize Pubspec & Enable Linux
+      # --- UPDATE THIS STEP FOR LINUX AND ANDROID FLUTTER JOBS ---
+      - name: Sanitize Pubspec (Remove Broken Monorepo Links)
         run: |
-          cd ${{ env.PROJECT_DIR }}
-          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
-          sed -i '/resolution: workspace/d' pubspec.yaml || true
+          cd app_workspace
+          echo "Scanning and sanitizing all pubspec.yaml files..."
+          
+          # Find all pubspec.yaml files recursively and strip broken links
+          find . -name "pubspec.yaml" -type f -exec sed -i '/analysis_defaults:/,+1d' {} + || true
+          find . -name "pubspec.yaml" -type f -exec sed -i '/resolution: workspace/d' {} + || true
+          
+          # For Linux job only (delete this line for Android job):
           flutter config --enable-linux-desktop
+      # ---------------------------------------------------------
 
       - name: Force Regenerate Native Folders
         run: |
