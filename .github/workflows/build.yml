@@ -231,22 +231,6 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      - name: Force Regenerate Native Folders
-        shell: bash
-        run: |
-          cd ${{ env.PROJECT_DIR }}
-          
-          # --- THE BULLETPROOF PYTHON FIX ---
-          # Extracts everything before the last dot (e.g. "com.vaultos.app" -> "com.vaultos")
-          ORG_NAME=$(python -c "print('.'.join('${{ inputs.package_id }}'.split('.')[:-1]))" 2>/dev/null || echo "com.example")
-          # ----------------------------------
-          
-          rm -rf android/ ios/ windows/ linux/ macos/
-          echo "Generating brand new native shells for: $ORG_NAME"
-          
-          # Run flutter create (the platforms flag will generate whatever the current OS needs)
-          flutter create --org $ORG_NAME .
-
       # --- REPLACE SANITIZE PUBSPEC WITH THIS ---
       - name: Isolate Project & Sanitize (Nuclear Monorepo Fix)
         run: |
@@ -278,6 +262,23 @@ jobs:
             echo "No pubspec.yaml found in isolated directory!"
             exit 1
           fi
+
+      - name: Force Regenerate Native Folders
+        shell: bash
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          
+          # --- THE BULLETPROOF PYTHON FIX ---
+          # Extracts everything before the last dot (e.g. "com.vaultos.app" -> "com.vaultos")
+          ORG_NAME=$(python -c "print('.'.join('${{ inputs.package_id }}'.split('.')[:-1]))" 2>/dev/null || echo "com.example")
+          # ----------------------------------
+          
+          rm -rf android/ ios/ windows/ linux/ macos/
+          echo "Generating brand new native shells for: $ORG_NAME"
+          
+          # Run flutter create (the platforms flag will generate whatever the current OS needs)
+          flutter create --org $ORG_NAME .
+
 
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
