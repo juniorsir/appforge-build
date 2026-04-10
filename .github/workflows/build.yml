@@ -247,19 +247,27 @@ jobs:
           # Run flutter create (the platforms flag will generate whatever the current OS needs)
           flutter create --org $ORG_NAME .
 
-      # --- UPDATE THIS STEP FOR LINUX AND ANDROID FLUTTER JOBS ---
+      # --- UPDATE THIS IN build-linux AND build-flutter ---
       - name: Sanitize Pubspec (Remove Broken Monorepo Links)
         run: |
           cd app_workspace
           echo "Scanning and sanitizing all pubspec.yaml files..."
           
-          # Find all pubspec.yaml files recursively and strip broken links
-          find . -name "pubspec.yaml" -type f -exec sed -i '/analysis_defaults:/,+1d' {} + || true
-          find . -name "pubspec.yaml" -type f -exec sed -i '/resolution: workspace/d' {} + || true
+          # A bulletproof loop to find and sanitize every pubspec.yaml file
+          find . -name "pubspec.yaml" -type f | while read file; do
+            echo "Sanitizing: $file"
+            
+            # Delete the 'resolution: workspace' line
+            sed -i '/resolution: workspace/d' "$file" || true
+            
+            # Delete the 'analysis_defaults' block (the line and the path below it)
+            sed -i '/analysis_defaults:/,+1d' "$file" || true
+            
+            # Also remove 'publish_to: none' just in case it causes conflicts
+            sed -i '/publish_to:/d' "$file" || true
+          done
           
-          # For Linux job only (delete this line for Android job):
-          flutter config --enable-linux-desktop
-      # ---------------------------------------------------------
+          echo "Sanitization complete."
 
       - name: Install Dependencies
         run: cd ${{ env.PROJECT_DIR }} && flutter pub get
@@ -427,12 +435,30 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
+      # --- UPDATE THIS IN build-windows ---
       - name: Sanitize Pubspec & Enable Windows
-        shell: bash
+        shell: pwsh
         run: |
-          cd ${{ env.PROJECT_DIR }}
-          sed -i '/analysis_defaults:/,+1d' pubspec.yaml || true
-          sed -i '/resolution: workspace/d' pubspec.yaml || true
+          cd app_workspace
+          echo "Scanning and sanitizing all pubspec.yaml files..."
+          
+          # Find all pubspec.yaml files and remove broken links
+          Get-ChildItem -Path . -Filter "pubspec.yaml" -Recurse | ForEach-Object {
+            $filePath = $_.FullName
+            echo "Sanitizing: $filePath"
+            
+            # Read content, filter out bad lines, write back
+            $content = Get-Content $filePath
+            $newContent = $content | Where-Object { 
+              $_ -notmatch 'analysis_defaults:' -and 
+              $_ -notmatch 'path:.*analysis_defaults' -and 
+              $_ -notmatch 'resolution:\s*workspace' -and
+              $_ -notmatch 'publish_to:'
+            }
+            $newContent | Set-Content $filePath
+          }
+          
+          echo "Sanitization complete. Enabling Windows Desktop..."
           flutter config --enable-windows-desktop
 
       # --- 1. GENERATE FOLDERS FIRST ---
@@ -542,19 +568,27 @@ jobs:
             echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
           fi
 
-      # --- UPDATE THIS STEP FOR LINUX AND ANDROID FLUTTER JOBS ---
+      # --- UPDATE THIS IN build-linux AND build-flutter ---
       - name: Sanitize Pubspec (Remove Broken Monorepo Links)
         run: |
           cd app_workspace
           echo "Scanning and sanitizing all pubspec.yaml files..."
           
-          # Find all pubspec.yaml files recursively and strip broken links
-          find . -name "pubspec.yaml" -type f -exec sed -i '/analysis_defaults:/,+1d' {} + || true
-          find . -name "pubspec.yaml" -type f -exec sed -i '/resolution: workspace/d' {} + || true
+          # A bulletproof loop to find and sanitize every pubspec.yaml file
+          find . -name "pubspec.yaml" -type f | while read file; do
+            echo "Sanitizing: $file"
+            
+            # Delete the 'resolution: workspace' line
+            sed -i '/resolution: workspace/d' "$file" || true
+            
+            # Delete the 'analysis_defaults' block (the line and the path below it)
+            sed -i '/analysis_defaults:/,+1d' "$file" || true
+            
+            # Also remove 'publish_to: none' just in case it causes conflicts
+            sed -i '/publish_to:/d' "$file" || true
+          done
           
-          # For Linux job only (delete this line for Android job):
-          flutter config --enable-linux-desktop
-      # ---------------------------------------------------------
+          echo "Sanitization complete."
 
       - name: Force Regenerate Native Folders
         run: |
