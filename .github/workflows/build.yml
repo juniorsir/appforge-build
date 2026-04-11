@@ -347,12 +347,48 @@ jobs:
             flutter build apk --debug --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
           fi
         
-      - name: Upload APK Artifact
+      # --- REPLACE 'Upload APK Artifact' IN YOUR FLUTTER JOB WITH THIS ---
+      - name: Upload APK to Private JStore (Bypass Quota)
+        env:
+          JSTORE_API_KEY: ${{ secrets.JSTORE_API_KEY }}
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          APK_PATH="build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk"
+          
+          if [ -f "$APK_PATH" ]; then
+            echo "Uploading $APK_PATH to JStore..."
+            
+            # Use your custom curl command to upload the file and capture the JSON response
+            API_RESPONSE=$(curl -s -X POST "https://jstore.2bd.net/api/upload" \
+              -H "x-api-key: $JSTORE_API_KEY" \
+              -F "file=@$APK_PATH")
+              
+            echo "API Response: $API_RESPONSE"
+            
+            # Use jq (installed by default on GitHub runners) to extract the 'url' from the JSON
+            DOWNLOAD_URL=$(echo $API_RESPONSE | jq -r '.url')
+            
+            if [ "$DOWNLOAD_URL" == "null" ] || [ -z "$DOWNLOAD_URL" ]; then
+              echo "Error: Failed to parse download URL from JStore API."
+              exit 1
+            fi
+            
+            echo "Successfully uploaded! URL: $DOWNLOAD_URL"
+            
+            # Save this URL to a tiny text file for the Python CLI to find
+            echo "$DOWNLOAD_URL" > download_link.txt
+          else
+            echo "Error: APK not found at $APK_PATH"
+            exit 1
+          fi
+          
+      - name: Send Download Link to CLI
         uses: actions/upload-artifact@v4
         with:
-          name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-${{ inputs.build_type }}.apk
+          name: appforge-link-${{ github.event.inputs.app_id }}
+          path: ${{ env.PROJECT_DIR }}/download_link.txt
           retention-days: 1
+      # -------------------------------------------------------------------
             
       # --------------------------------------------
   # 3. NATIVE ANDROID (Kotlin/Java) BUILDER
