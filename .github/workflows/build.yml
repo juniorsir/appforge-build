@@ -413,13 +413,27 @@ jobs:
 
       - name: Set Project Directory
         run: echo "PROJECT_DIR=app_workspace" >> $GITHUB_ENV
-  
+
+      - name: Debug Project Structure
+        run: |
+         echo "PROJECT_DIR=${{ env.PROJECT_DIR }}"
+         pwd
+         ls -la
+         find app_workspace -type d | sort
       # --- IN build.yml ---
       - name: Setup Permanent App Signature
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          cd ${{ env.PROJECT_DIR }}/android/app
+          APP_DIR="${{ env.PROJECT_DIR }}/android/app"
+
+          if [ ! -d "$APP_DIR" ]; then
+            echo "ERROR: Android app directory not found!"
+            find ${{ env.PROJECT_DIR }} -type d | sort
+            exit 1
+          fi
+
+          cd "$APP_DIR"
           
           # 1. Decode the secret back into a real keystore file
           echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
