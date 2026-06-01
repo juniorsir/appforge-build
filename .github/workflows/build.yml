@@ -445,7 +445,27 @@ jobs:
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
-      
+
+      - name: Verify Build Files
+        run: |
+          cd app_workspace
+          echo "=== Root Files ==="
+          ls -la
+
+          echo ""
+          echo "=== Gradle Files ==="
+          find gradle -type f
+
+          echo ""
+          echo "=== Wrapper Files ==="
+          find . -name "gradlew" -o -name "gradlew.bat" -o -name "gradle-wrapper.properties"
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Gradle Wrapper
+        run: |
+          cd app_workspace
+          gradle wrapper
       - name: Build Native APK
         run: |
           cd app_workspace
