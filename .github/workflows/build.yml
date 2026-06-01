@@ -436,22 +436,22 @@ jobs:
           echo "APP_DIR=$APP_DIR" >> $GITHUB_ENV
 
           #cd "$APP_DIR"
-          - name: Inject Release Keystore
-            env:
-              KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-            run: |
-              cd app_workspace
+      - name: Inject Release Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          cd app_workspace
 
-              echo "$KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
+          echo "$KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
 
-              echo "storeFile=my-upload-key.jks" > keystore.properties
-              echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
-              echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
-              echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+          echo "storeFile=my-upload-key.jks" > keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
 
-              echo "Keystore injected successfully"
+          echo "Keystore injected successfully"
     
-              ls -la my-upload-key.jks keystore.properties
+          ls -la my-upload-key.jks keystore.properties
           # 1. Decode the secret back into a real keystore file
           #echo $KEYSTORE_BASE64 | base64 --decode > appforge.keystore
           
