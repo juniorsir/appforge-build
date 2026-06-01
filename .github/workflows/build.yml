@@ -421,17 +421,19 @@ jobs:
          ls -la
          find app_workspace -type d | sort
       # --- IN build.yml ---
-      - name: Setup Permanent App Signature
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      - name: Locate Android App Module
         run: |
-          APP_DIR="${{ env.PROJECT_DIR }}/android/app"
-
-          if [ ! -d "$APP_DIR" ]; then
-            echo "ERROR: Android app directory not found!"
-            find ${{ env.PROJECT_DIR }} -type d | sort
+          if [ -d "${{ env.PROJECT_DIR }}/android/app" ]; then
+            APP_DIR="${{ env.PROJECT_DIR }}/android/app"
+          elif [ -d "${{ env.PROJECT_DIR }}/app" ]; then
+            APP_DIR="${{ env.PROJECT_DIR }}/app"
+          else
+            echo "Cannot find Android app module"
+            find ${{ env.PROJECT_DIR }} -type d
             exit 1
           fi
+
+          echo "APP_DIR=$APP_DIR" >> $GITHUB_ENV
 
           cd "$APP_DIR"
           
