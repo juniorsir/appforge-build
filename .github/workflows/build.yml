@@ -466,6 +466,10 @@ jobs:
         run: |
           cd app_workspace
           gradle wrapper
+
+      - name: Remove Duplicate Launcher Icons
+        run: |
+          find app_workspace/app/src/main/res -name "ic_launcher.webp" -delete
       - name: Build Native APK
         run: |
           cd app_workspace
