@@ -485,6 +485,21 @@ jobs:
       - name: Remove Duplicate Launcher Icons
         run: |
           find app_workspace/app/src/main/res -name "ic_launcher.webp" -delete
+      - name: Verify Keystores
+        run: |
+          cd app_workspace
+
+          find . -name "*.keystore" -o -name "*.jks" -o -name "*.base64"
+      - name: Restore Debug Keystore
+        run: |
+          cd app_workspace
+
+          if [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+            echo "Debug keystore restored"
+          fi
+
+          ls -la debug.keystore*
       - name: Build Native APK
         run: |
           cd app_workspace
