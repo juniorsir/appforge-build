@@ -465,12 +465,10 @@ jobs:
           # Use ORG_GRADLE_PROJECT_ prefix to force-inject these into Gradle
           # or simply pass them as system properties via -D
           if [ "${{ inputs.build_type }}" == "release" ]; then
-            ./gradlew --stop
             ./gradlew assembleRelease \
-              -Dorg.gradle.project.KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD \
-              -Dorg.gradle.project.KEY_PASSWORD=$KEY_PASSWORD \
-              -Dorg.gradle.project.KEY_ALIAS=$KEY_ALIAS \
-              -Dorg.gradle.project.KEYSTORE_PATH=$KEYSTORE_PATH
+            -PKEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -PKEY_PASSWORD="$KEY_PASSWORD" \
+            -PKEY_ALIAS="$KEY_ALIAS"
           else
             ./gradlew assembleDebug
           fi
