@@ -517,6 +517,17 @@ jobs:
           echo ""
           echo "=== keystore.properties ==="
           cat keystore.properties | sed 's/storePassword=.*/storePassword=***/'
+      - name: Debug Signing Environment
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
+
+          env | grep -E 'KEYSTORE|KEY_|STORE_' | sed 's/=.*$/=***/'
       - name: Build Native APK
         run: |
           cd app_workspace
