@@ -483,12 +483,17 @@ jobs:
           else
             ./gradlew assembleDebug
           fi
+
+      - name: Debug APK Location
+        run: |
+          echo "Searching for APKs..."
+          find "${{ env.PROJECT_DIR }}" -name "*.apk"
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: "${{ env.PROJECT_DIR }}/build/outputs/apk/*.apk"
+          path: "${{ env.PROJECT_DIR }}/app/build/outputs/apk/**/*.apk"
           retention-days: 1
 
   # --- Flutter Windows Build ---
