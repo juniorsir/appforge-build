@@ -488,7 +488,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: appforge-apk-${{ github.event.inputs.app_id }}
-          path: "${{ env.PROJECT_DIR }}/build/outputs/apk/**/*.apk"
+          path: "${{ env.PROJECT_DIR }}/build/outputs/apk/*.apk"
           retention-days: 1
 
   # --- Flutter Windows Build ---
