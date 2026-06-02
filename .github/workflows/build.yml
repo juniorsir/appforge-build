@@ -456,11 +456,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          # IMPORTANT: If your code uses KEYSTORE_PATH, provide it here too
-          KEYSTORE_PATH: ${{ env.PROJECT_DIR }}/app/my-upload-key.jks
-          ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ORG_GRADLE_PROJECT_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          ORG_GRADLE_PROJECT_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          
         run: |
           cd "${{ env.PROJECT_DIR }}"
           chmod +x ./gradlew
@@ -470,11 +466,12 @@ jobs:
           if [ "${{ inputs.build_type }}" == "release" ]; then
             ./gradlew --stop
             # 2. Force clean everything
-            ./gradlew clean
             ./gradlew assembleRelease \
-            -PKEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
-            -PKEY_PASSWORD="$KEY_PASSWORD" \
-            -PKEY_ALIAS="$KEY_ALIAS"
+            --no-daemon \
+            --no-configuration-cache \
+            -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
+            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
           else
             ./gradlew assembleDebug
           fi
