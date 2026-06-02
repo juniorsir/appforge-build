@@ -441,16 +441,14 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           cd "${{ env.PROJECT_DIR }}"
-          # Decode to the root
+          # Decode directly into the root folder
           echo "$KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
           
-          # Write these EXACT names. Android plugin looks for these specific keys
-          # when signingConfig is configured to use them.
-          echo "android.injected.signing.store.file=${{ env.PROJECT_DIR }}/my-upload-key.jks" >> gradle.properties
-          echo "android.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> gradle.properties
-          echo "android.injected.signing.key.alias=${{ secrets.KEY_ALIAS }}" >> gradle.properties
-          echo "android.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}" >> gradle.properties
-
+          # Write properties to app/gradle.properties
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > app/gradle.properties
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> app/gradle.properties
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> app/gradle.properties
+          
       - name: Ensure Gradle Wrapper Exists
         run: |
           cd "${{ env.PROJECT_DIR }}"
