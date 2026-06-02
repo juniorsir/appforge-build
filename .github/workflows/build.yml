@@ -453,11 +453,25 @@ jobs:
           echo "STORE_FILE=app/my-upload-key.jks" >> "${{ env.PROJECT_DIR }}/gradle.properties"
           
       - name: Build Native APK
+        # We pass these as environment variables explicitly to the Gradle process
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          # IMPORTANT: If your code uses KEYSTORE_PATH, provide it here too
+          KEYSTORE_PATH: ${{ env.PROJECT_DIR }}/app/my-upload-key.jks
         run: |
           cd "${{ env.PROJECT_DIR }}"
-          chmod +x ./gradlew || (gradle wrapper && chmod +x ./gradlew)
+          chmod +x ./gradlew
+          
+          # Use ORG_GRADLE_PROJECT_ prefix to force-inject these into Gradle
+          # or simply pass them as system properties via -D
           if [ "${{ inputs.build_type }}" == "release" ]; then
-            ./gradlew assembleRelease
+            ./gradlew assembleRelease \
+              -Dorg.gradle.project.KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD \
+              -Dorg.gradle.project.KEY_PASSWORD=$KEY_PASSWORD \
+              -Dorg.gradle.project.KEY_ALIAS=$KEY_ALIAS \
+              -Dorg.gradle.project.KEYSTORE_PATH=$KEYSTORE_PATH
           else
             ./gradlew assembleDebug
           fi
