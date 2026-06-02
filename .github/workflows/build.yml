@@ -500,6 +500,16 @@ jobs:
           fi
 
           ls -la debug.keystore*
+      - name: Verify Signing Config
+        run: |
+          cd app_workspace
+
+          echo "=== Files ==="
+          find . -name "*.jks" -o -name "*.keystore" -o -name "keystore.properties"
+
+          echo ""
+          echo "=== keystore.properties ==="
+          cat keystore.properties | sed 's/storePassword=.*/storePassword=***/'
       - name: Build Native APK
         run: |
           cd app_workspace
