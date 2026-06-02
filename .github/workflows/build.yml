@@ -529,6 +529,11 @@ jobs:
 
           env | grep -E 'KEYSTORE|KEY_|STORE_' | sed 's/=.*$/=***/'
       - name: Build Native APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PATH: app_workspace/my-upload-key.jks
         run: |
           cd app_workspace
           chmod +x ./gradlew
