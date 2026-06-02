@@ -423,15 +423,6 @@ jobs:
             ls -R app_workspace
             exit 1
           fi
-
-      - name: Ensure Gradle Wrapper Exists
-        run: |
-          cd "${{ env.PROJECT_DIR }}"
-          if [ ! -f "gradlew" ]; then
-            echo "Gradle wrapper not found, generating one..."
-            gradle wrapper --gradle-version 8.7
-          fi
-          chmod +x gradlew
           
       - name: Inject Release Keystore
         env:
@@ -451,6 +442,15 @@ jobs:
           echo "--- VERIFYING FILE CONTENT ---"
           cat app/gradle.properties
           echo "------------------------------"
+
+      - name: Ensure Gradle Wrapper Exists
+        run: |
+          cd "${{ env.PROJECT_DIR }}"
+          if [ ! -f "gradlew" ]; then
+            echo "Gradle wrapper not found, generating one..."
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x gradlew
           
       - name: Build Native APK
         # We pass these as environment variables explicitly to the Gradle process
