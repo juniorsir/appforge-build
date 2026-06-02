@@ -449,7 +449,7 @@ jobs:
           retention-days: 1
 
   # --- Flutter Windows Build ---
-   (.exe)
+  
   # ==========================================
   build-windows:
     if: |
