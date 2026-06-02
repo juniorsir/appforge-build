@@ -436,17 +436,22 @@ jobs:
       - name: Inject Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          # Explicitly bring secrets into the shell env
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          K_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # Inject into the app sub-module where build.gradle.kts expects it
+          # 1. Decode keystore
           mkdir -p "${{ env.PROJECT_DIR }}/app"
           echo "$KEYSTORE_BASE64" | base64 --decode > "${{ env.PROJECT_DIR }}/app/my-upload-key.jks"
 
-          # Create properties file in the root (usually where it's loaded)
-          # OR in the /app folder depending on your build.gradle.kts config
-          echo "storeFile=app/my-upload-key.jks" > "${{ env.PROJECT_DIR }}/keystore.properties"
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> "${{ env.PROJECT_DIR }}/keystore.properties"
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> "${{ env.PROJECT_DIR }}/keystore.properties"
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> "${{ env.PROJECT_DIR }}/keystore.properties"
+          # 2. Write ALL secrets into gradle.properties
+          # Gradle automatically reads this file when running a build
+          echo "KEYSTORE_PASSWORD=${KS_PASS}" >> "${{ env.PROJECT_DIR }}/gradle.properties"
+          echo "KEY_ALIAS=${K_ALIAS}" >> "${{ env.PROJECT_DIR }}/gradle.properties"
+          echo "KEY_PASSWORD=${K_PASS}" >> "${{ env.PROJECT_DIR }}/gradle.properties"
+          echo "STORE_FILE=app/my-upload-key.jks" >> "${{ env.PROJECT_DIR }}/gradle.properties"
+          
       - name: Build Native APK
         run: |
           cd "${{ env.PROJECT_DIR }}"
