@@ -423,6 +423,18 @@ jobs:
             ls -R app_workspace
             exit 1
           fi
+
+      - name: Clean Duplicate Resources
+        run: |
+          cd "${{ env.PROJECT_DIR }}"
+          # Deletes all .png files that have a corresponding .webp file
+          find app/src/main/res -name "*.png" -type f | while read png_file; do
+            webp_file="${png_file%.png}.webp"
+            if [ -f "$webp_file" ]; then
+              echo "Found duplicate: $png_file (keeping $webp_file)"
+              rm "$png_file"
+            fi
+          done
           
       - name: Inject Release Keystore
         env:
