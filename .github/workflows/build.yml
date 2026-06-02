@@ -490,6 +490,13 @@ jobs:
           cd app_workspace
 
           find . -name "*.keystore" -o -name "*.jks" -o -name "*.base64"
+      - name: Validate Signing Secrets
+        run: |
+          [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ] && echo "KEYSTORE_PASSWORD missing" && exit 1
+          [ -z "${{ secrets.KEY_ALIAS }}" ] && echo "KEY_ALIAS missing" && exit 1
+          [ -z "${{ secrets.KEY_PASSWORD }}" ] && echo "KEY_PASSWORD missing" && exit 1
+
+          echo "All signing secrets present"
       - name: Restore Debug Keystore
         run: |
           cd app_workspace
