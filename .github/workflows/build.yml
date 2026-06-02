@@ -458,6 +458,9 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           # IMPORTANT: If your code uses KEYSTORE_PATH, provide it here too
           KEYSTORE_PATH: ${{ env.PROJECT_DIR }}/app/my-upload-key.jks
+          ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           cd "${{ env.PROJECT_DIR }}"
           chmod +x ./gradlew
