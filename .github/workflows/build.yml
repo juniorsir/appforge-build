@@ -465,6 +465,9 @@ jobs:
           # Use ORG_GRADLE_PROJECT_ prefix to force-inject these into Gradle
           # or simply pass them as system properties via -D
           if [ "${{ inputs.build_type }}" == "release" ]; then
+            ./gradlew --stop
+            # 2. Force clean everything
+            ./gradlew clean
             ./gradlew assembleRelease \
             -PKEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
             -PKEY_PASSWORD="$KEY_PASSWORD" \
