@@ -436,19 +436,15 @@ jobs:
       - name: Inject Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-          K_ALIAS: ${{ secrets.KEY_ALIAS }}
-          K_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd "${{ env.PROJECT_DIR }}"
           # 1. Decode keystore
           echo "$KEYSTORE_BASE64" | base64 --decode > app/my-upload-key.jks
           
-          # 2. Force these into gradle.properties so Gradle reads them as Project Properties
-          echo "KEYSTORE_PASSWORD=$KS_PASS" >> gradle.properties
-          echo "KEY_PASSWORD=$K_PASS" >> gradle.properties
-          echo "KEY_ALIAS=$K_ALIAS" >> gradle.properties
-          echo "KEYSTORE_PATH=${{ env.PROJECT_DIR }}/app/my-upload-key.jks" >> gradle.properties
+          # 2. Write properties DIRECTLY into the app module's folder
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > app/gradle.properties
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> app/gradle.properties
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> app/gradle.properties
           
       - name: Build Native APK
         # We pass these as environment variables explicitly to the Gradle process
