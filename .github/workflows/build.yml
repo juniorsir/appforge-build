@@ -438,16 +438,45 @@ jobs:
           
       - name: Inject Release Keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          APP_ID: ${{ inputs.app_id }}
+          # Expose all possible secrets
+          KEYSTORE_BASE64_APP: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD_APP: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD_APP: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS_APP: ${{ secrets.KEY_ALIAS }}
+          # Dynamically mapped secrets (e.g., KEYSTORE_BASE64_ABC123)
+          # You must add these mappings manually as you add new apps
+          KEYSTORE_BASE64_ABC123: ${{ secrets.KEYSTORE_BASE64_ABC123 }}
+          KEYSTORE_PASSWORD_ABC123: ${{ secrets.KEYSTORE_PASSWORD_ABC123 }}
+          KEY_PASSWORD_ABC123: ${{ secrets.KEY_PASSWORD_ABC123 }}
+          KEY_ALIAS_ABC123: ${{ secrets.KEY_ALIAS_ABC123 }}
         run: |
           cd "${{ env.PROJECT_DIR }}"
-          # Decode directly into the root folder
-          echo "$KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
+          mkdir -p app
           
-          # Write properties to app/gradle.properties
-          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > app/gradle.properties
-          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> app/gradle.properties
-          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> app/gradle.properties
+          ID_UPPER=$(echo $APP_ID | tr '[:lower:]' '[:upper:]')
+          
+          # Define the dynamic variable names
+          B64_VAR="KEYSTORE_BASE64_$ID_UPPER"
+          PASS_VAR="KEYSTORE_PASSWORD_$ID_UPPER"
+          KPASS_VAR="KEY_PASSWORD_$ID_UPPER"
+          ALIAS_VAR="KEY_ALIAS_$ID_UPPER"
+          
+          # Use ${!VAR:-default} syntax: if dynamic var is empty, use the "_APP" default
+          # We check if the variable exists and is not empty
+          VAL_B64="${!B64_VAR:-$KEYSTORE_BASE64_APP}"
+          VAL_PASS="${!PASS_VAR:-$KEYSTORE_PASSWORD_APP}"
+          VAL_KPASS="${!KPASS_VAR:-$KEY_PASSWORD_APP}"
+          VAL_ALIAS="${!ALIAS_VAR:-$KEY_ALIAS_APP}"
+          
+          # Inject the resolved values
+          echo "$VAL_B64" | base64 --decode > app/my-upload-key.jks
+          
+          echo "KEYSTORE_PASSWORD=$VAL_PASS" > app/gradle.properties
+          echo "KEY_PASSWORD=$VAL_KPASS" >> app/gradle.properties
+          echo "KEY_ALIAS=$VAL_ALIAS" >> app/gradle.properties
+          
+          echo "Successfully injected keys (Fallback mode: ON)"
           
       - name: Ensure Gradle Wrapper Exists
         run: |
