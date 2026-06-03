@@ -488,30 +488,23 @@ jobs:
           chmod +x gradlew
           
       - name: Build Native APK
-        # We pass these as environment variables explicitly to the Gradle process
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          
         run: |
           cd "${{ env.PROJECT_DIR }}"
           chmod +x ./gradlew
           
-          # Use ORG_GRADLE_PROJECT_ prefix to force-inject these into Gradle
-          # or simply pass them as system properties via -D
-          if [ "${{ inputs.build_type }}" == "release" ]; then
-            ./gradlew --stop
-            # 2. Force clean everything
-            ./gradlew assembleRelease \
+          # We use android.injected properties. 
+          # These are "God-mode" flags that override EVERYTHING in build.gradle.kts.
+          # They work for both 'assembleDebug' and 'assembleRelease'.
+          
+          ./gradlew --stop
+          ./gradlew clean assemble${{ inputs.build_type == 'release' && 'Release' || 'Debug' }} \
             --no-daemon \
             --no-configuration-cache \
-            -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
-            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-          else
-            ./gradlew assembleDebug
-          fi
+            -Pandroid.injected.signing.store.file=$(pwd)/app/my-upload-key.jks \
+            -Pandroid.injected.signing.store.password=$(grep KEYSTORE_PASSWORD app/gradle.properties | cut -d'=' -f2) \
+            -Pandroid.injected.signing.key.alias=$(grep KEY_ALIAS app/gradle.properties | cut -d'=' -f2) \
+            -Pandroid.injected.signing.key.password=$(grep KEY_PASSWORD app/gradle.properties | cut -d'=' -f2) \
+            -Pandroid.injected.signing.debug.keystore=$(pwd)/app/my-upload-key.jks
 
       - name: Debug APK Location
         run: |
