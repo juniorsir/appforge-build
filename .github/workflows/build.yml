@@ -500,6 +500,7 @@ jobs:
           ./gradlew clean assemble${{ inputs.build_type == 'release' && 'Release' || 'Debug' }} \
             --no-daemon \
             --no-configuration-cache \
+            --console=plain \
             -Pandroid.injected.signing.store.file=$(pwd)/app/my-upload-key.jks \
             -Pandroid.injected.signing.store.password=$(grep KEYSTORE_PASSWORD app/gradle.properties | cut -d'=' -f2) \
             -Pandroid.injected.signing.key.alias=$(grep KEY_ALIAS app/gradle.properties | cut -d'=' -f2) \
